@@ -212,15 +212,4 @@ npm run i18n:translate
 ---
 
 
-
-### Contacts support
-
-- 📧 **Email** : support@nutri-ai.com
-- 💬 **Slack** : #nutri-ai-support
-- 📚 **Documentation** : https://docs.nutri-ai.com
-- 🐛 **Bug Reports** : [Issues GitHub](https://github.com/votre-org/nutri-ai/issues)
-
----
-
-
 **Développé avec ❤️ par l'équipe des Agentils**
