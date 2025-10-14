@@ -1,0 +1,19 @@
+# Secrets & Environment
+*.env*
+secrets/
+
+# Dependencies
+venv/
+.venv/
+
+# Build outputs
+__pycache__/
+*.pyc
+
+# Cache
+.cache/
+
+# Photo, faux profils etc...
+uploads/
+media/
+photo/
