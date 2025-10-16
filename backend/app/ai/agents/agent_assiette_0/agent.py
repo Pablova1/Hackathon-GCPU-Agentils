@@ -196,20 +196,6 @@ class FoodAnalyzerAgent:
         return "\n".join(output)
 
 
-# Fonction utilitaire pour un usage simple
-def analyze_plate_simple(image_path: str, api_key: Optional[str] = None) -> Dict:
-    """
-    Fonction simplifiée pour analyser une assiette.
-    
-    Args:
-        image_path: Chemin vers l'image
-        api_key: Clé API (optionnel)
-        
-    Returns:
-        Résultats de l'analyse
-    """
-    agent = FoodAnalyzerAgent(api_key=api_key)
-    return agent.analyze_plate(image_path)
 
 
 # Point d'entrée pour tests
