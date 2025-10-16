@@ -17,3 +17,21 @@ __pycache__/
 uploads/
 media/
 photo/
+
+# Ce dossier contient les fichiers générés par Next.js (builds, caches, etc.) et ne doit pas être versionné.
+.next/
+
+# Fichiers de logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ce dossier contient les dépendances installées par npm et ne doit pas être versionné.
+node_modules/
+
+# Fichiers de cache Webpack ou SWC
+.swc/
+.cache/
+
+# IDEs et éditeurs
+.vscode/
