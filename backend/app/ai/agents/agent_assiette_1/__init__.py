@@ -1,0 +1,1 @@
+# Initialization file for agent_assiette_1
