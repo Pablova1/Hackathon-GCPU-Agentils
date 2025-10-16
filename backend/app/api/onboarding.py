@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
-from app.db.session_store import create_session
-from app.services.onboarding_planner import first_question
+from app.db.session_store import create_session, get_session
+from app.services.onboarding_planner import first_question, next_required_slot, question_for_slot
 from app.ai.onboarding_ai import suggest_followup
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
@@ -21,13 +21,6 @@ async def start(user_id: str = Query(..., description="ID de l'utilisateur qui d
         raise HTTPException(status_code=400, detail=str(e))
     question = first_question()
     return {"session_id": session["session_id"], "question": question}
-
-
-from fastapi import APIRouter, HTTPException, Query
-from app.db.session_store import create_session, get_session
-from app.services.onboarding_planner import first_question, next_required_slot, question_for_slot
-
-router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
 @router.get("/next")
 async def next_question(session_id: str = Query(..., description="ID de session d'onboarding")):
@@ -53,6 +46,14 @@ async def next_question(session_id: str = Query(..., description="ID de session 
     slots = sess["slots"]
     nxt = next_required_slot(slots)
 
+    if nxt is not None:
+        # Il y a une question requise à poser
+        question = question_for_slot(nxt)
+        return {
+            "session_id": session_id,
+            "finished": False,
+            "question": question
+        }
     if nxt is None:
         # Appel à l’IA avant de terminer
         asked_ai_count = sess.get("asked_ai_count", 0)
@@ -73,3 +74,33 @@ async def next_question(session_id: str = Query(..., description="ID de session 
             "finished": True,
             "profile_preview": slots
         }
+    
+@router.post("/end")
+async def end_onboarding(session_id: str = Query(..., description="ID de la session d'onboarding")):
+    """
+    Termine l'onboarding : marque la session comme complète et renvoie le profil final.
+    """
+    sess = get_session(session_id)
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session inconnue")
+
+    sess["state"] = "COMPLETED"
+
+    slots = sess.get("slots", {})
+
+    # Calcul IMC (optionnel)
+    if "height_cm" in slots and "weight_kg" in slots:
+        try:
+            h = float(slots["height_cm"])
+            w = float(slots["weight_kg"])
+            bmi = round(w / ((h / 100) ** 2), 1)
+            slots["bmi"] = bmi
+        except Exception:
+            pass  # si les données sont invalides, on ignore
+
+    return {
+        "status": "completed",
+        "session_id": session_id,
+        "profile": slots,
+        "message": "Profil enregistré avec succès"
+    }
