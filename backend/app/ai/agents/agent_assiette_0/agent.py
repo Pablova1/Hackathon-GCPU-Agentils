@@ -29,13 +29,19 @@ class FoodAnalyzerAgent:
     Analyse cette photo d'assiette et identifie tous les aliments présents.
     Retourne UNIQUEMENT un JSON valide avec cette structure exacte :
     {
-      "aliments": [
+    "aliments": [
         {
-          "nom": "nom de l'aliment",
-          "quantite_estimee": "quantité en grammes"
-        }
-      ]
+        "nom": "nom de l'aliment",
+        "quantite_estimee": "quantité en grammes"
+        }  
+    ]
     }
+
+    IMPORTANT: 
+    - quantite_estimee doit être un NOMBRE uniquement (exemple: 190, pas "190g" ni "190 grammes")
+    - Ne pas inclure d'unité de mesure dans quantite_estimee
+    - La quantité représente des grammes
+
     Ne retourne rien d'autre que le JSON, pas de texte avant ou après.
     """
     
@@ -112,6 +118,11 @@ class FoodAnalyzerAgent:
             
             # Parse le JSON
             result = json.loads(response_text)
+            
+            # Convertit quantite_estimee en entier
+            for aliment in result.get("aliments", []):
+                aliment["quantite_estimee"] = int(aliment["quantite_estimee"])
+            
             logger.info("Réponse JSON parsée avec succès")
             return result
             
@@ -119,6 +130,9 @@ class FoodAnalyzerAgent:
             logger.error(f"Erreur de parsing JSON: {e}")
             logger.error(f"Réponse brute: {response_text}")
             raise ValueError(f"Impossible de parser la réponse JSON: {e}")
+        except ValueError as e:
+            logger.error(f"Erreur de conversion de quantite_estimee: {e}")
+            raise ValueError(f"Erreur de conversion de quantite_estimee: {e}")
     
     def analyze_plate(
         self,
