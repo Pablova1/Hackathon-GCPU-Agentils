@@ -38,6 +38,22 @@ export default function Home() {
     }
   };
 
+  const handleAlimentChange = (index, field, value) => {
+    const updatedAliments = [...response.aliments];
+    updatedAliments[index][field] = value;
+    setResponse({ ...response, aliments: updatedAliments });
+  };
+
+  const handleAddAliment = () => {
+    const newAliment = { nom: '', quantite_estimee: 0 };
+    setResponse({ ...response, aliments: [...response.aliments, newAliment] });
+  };
+
+  const handleDeleteAliment = (index) => {
+    const updatedAliments = response.aliments.filter((_, i) => i !== index);
+    setResponse({ ...response, aliments: updatedAliments });
+  };
+
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
       <h1>Food Analyzer</h1>
@@ -57,9 +73,24 @@ export default function Home() {
           <p>{response.message}</p>
           <ul>
             {response.aliments.map((aliment, index) => (
-              <li key={index}>{aliment.nom} - {aliment.quantite_estimee}</li>
+              <li key={index}>
+                <input
+                  type="text"
+                  value={aliment.nom}
+                  onChange={(e) => handleAlimentChange(index, 'nom', e.target.value)}
+                  placeholder="Nom de l'aliment"
+                />
+                <input
+                  type="number"
+                  value={aliment.quantite_estimee}
+                  onChange={(e) => handleAlimentChange(index, 'quantite_estimee', parseInt(e.target.value, 10))}
+                  placeholder="Quantité"
+                />
+                <button onClick={() => handleDeleteAliment(index)}>Delete</button>
+              </li>
             ))}
           </ul>
+          <button onClick={handleAddAliment}>Add Aliment</button>
         </div>
       )}
     </div>
