@@ -26,23 +26,24 @@ class FoodAnalyzerAgent:
     """
     
     PROMPT_TEMPLATE = """
-    Analyse cette photo d'assiette et identifie tous les aliments présents.
-    Retourne UNIQUEMENT un JSON valide avec cette structure exacte :
+    Analyze this photo of a plate and identify all the foods present.
+    Return ONLY a valid JSON with this exact structure:
     {
-    "aliments": [
+    "foods": [
         {
-        "nom": "nom de l'aliment",
-        "quantite_estimee": "quantité en grammes"
+        "name": "name of the food",
+        "estimated_quantity": "quantity in grams"
         }  
     ]
     }
 
-    IMPORTANT: 
-    - quantite_estimee doit être un NOMBRE uniquement (exemple: 190, pas "190g" ni "190 grammes")
-    - Ne pas inclure d'unité de mesure dans quantite_estimee
-    - La quantité représente des grammes
+    IMPORTANT:
 
-    Ne retourne rien d'autre que le JSON, pas de texte avant ou après.
+    estimated_quantity must be a NUMBER only (example: 190, not "190g" or "190 grams")
+    Do not include any unit of measurement in estimated_quantity
+    The quantity represents grams
+
+    Do not return anything other than the JSON, no text before or after.
     """
     
     def __init__(
@@ -119,9 +120,9 @@ class FoodAnalyzerAgent:
             # Parse le JSON
             result = json.loads(response_text)
             
-            # Convertit quantite_estimee en entier
-            for aliment in result.get("aliments", []):
-                aliment["quantite_estimee"] = int(aliment["quantite_estimee"])
+            # Convertit estimated_quantity en entier
+            for aliment in result.get("foods", []):
+                aliment["estimated_quantity"] = int(aliment["estimated_quantity"])
             
             logger.info("Réponse JSON parsée avec succès")
             return result
@@ -131,8 +132,8 @@ class FoodAnalyzerAgent:
             logger.error(f"Réponse brute: {response_text}")
             raise ValueError(f"Impossible de parser la réponse JSON: {e}")
         except ValueError as e:
-            logger.error(f"Erreur de conversion de quantite_estimee: {e}")
-            raise ValueError(f"Erreur de conversion de quantite_estimee: {e}")
+            logger.error(f"Erreur de conversion de estimated_quantity: {e}")
+            raise ValueError(f"Erreur de conversion de estimated_quantity: {e}")
     
     def analyze_plate(
         self,
@@ -152,7 +153,7 @@ class FoodAnalyzerAgent:
         Example:
             >>> agent = FoodAnalyzerAgent()
             >>> result = agent.analyze_plate("mon_assiette.jpg")
-            >>> print(result['aliments'])
+            >>> print(result['foods'])
         """
         logger.info(f"Début de l'analyse de: {image_path}")
         
@@ -171,7 +172,7 @@ class FoodAnalyzerAgent:
             result = self._parse_response(response.text)
             
             # Log les résultats
-            logger.info(f"Analyse terminée: {len(result.get('aliments', []))} aliments détectés")
+            logger.info(f"Analyse terminée: {len(result.get('foods', []))} aliments détectés")
             
             return result
             
@@ -190,7 +191,7 @@ class FoodAnalyzerAgent:
             Liste des aliments avec leurs informations
         """
         result = self.analyze_plate(image_path)
-        return result.get('aliments', [])
+        return result.get('foods', [])
     
     def format_results(self, result: Dict) -> str:
         """
@@ -203,9 +204,9 @@ class FoodAnalyzerAgent:
             Chaîne formatée
         """
         output = ["Aliments détectés:"]
-        for aliment in result.get('aliments', []):
+        for aliment in result.get('foods', []):
             output.append(
-                f"  - {aliment['nom']}: {aliment['quantite_estimee']}"
+                f"  - {aliment['name']}: {aliment['estimated_quantity']}"
             )
         return "\n".join(output)
 

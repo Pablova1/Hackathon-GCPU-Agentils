@@ -35,3 +35,6 @@ node_modules/
 
 # IDEs et éditeurs
 .vscode/
+
+# Ignorer tous les fichiers __init__.py
+__init__.py

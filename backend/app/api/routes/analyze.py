@@ -25,8 +25,8 @@ router = APIRouter()
 
 # Modèles Pydantic
 class Aliment(BaseModel):
-    nom: str
-    quantite_estimee: int
+    name: str
+    estimated_quantity: int
 
 class AnalyseResponse(BaseModel):
     success: bool
@@ -71,11 +71,11 @@ async def analyze_plate(file: UploadFile = File(...)):
         result = analyzer.analyze_plate(str(temp_file_path))
         
         # Formatage de la réponse
-        aliments = result.get("aliments", [])
+        aliments = result.get("foods", [])
         
-        # Convertir quantite_estimee en entier pour chaque aliment
+        # Convertir estimated_quantity en entier pour chaque aliment
         for aliment in aliments:
-            aliment["quantite_estimee"] = int(aliment["quantite_estimee"])
+            aliment["estimated_quantity"] = int(aliment["estimated_quantity"])
 
         response = {
             "success": True,
@@ -127,7 +127,7 @@ async def analyze_nutrients(aliments: List[Aliment]):
 
         # Conversion des aliments en dictionnaire
         aliments_data = [
-            {"nom": aliment.nom, "quantite_estimee": aliment.quantite_estimee}
+            {"name": aliment.name, "estimated_quantity": aliment.estimated_quantity}
             for aliment in aliments
         ]
 
