@@ -104,14 +104,14 @@ export default function Home() {
               <li key={index}>
                 <input
                   type="text"
-                  value={aliment.nom}
-                  onChange={(e) => handleAlimentChange(index, 'nom', e.target.value)}
+                  value={aliment.name}
+                  onChange={(e) => handleAlimentChange(index, 'name', e.target.value)}
                   placeholder="Nom de l'aliment"
                 />
                 <input
                   type="number"
-                  value={aliment.quantite_estimee}
-                  onChange={(e) => handleAlimentChange(index, 'quantite_estimee', parseInt(e.target.value, 10))}
+                  value={aliment.estimated_quantity}
+                  onChange={(e) => handleAlimentChange(index, 'estimated_quantity', parseInt(e.target.value, 10))}
                   placeholder="Quantité"
                 />
                 <button onClick={() => handleDeleteAliment(index)}>Delete</button>
