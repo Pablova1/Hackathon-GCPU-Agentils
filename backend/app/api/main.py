@@ -49,7 +49,8 @@ async def root():
         "docs": "/docs",
         "health": "/api/analyze/health",
         "endpoints": {
-            "analyze_plate": "POST /api/analyze/plate"
+            "analyze_plate": "POST /api/analyze/plate",
+            "analyze_nutrients": "POST /api/analyze/nutrients"
         }
     }
 

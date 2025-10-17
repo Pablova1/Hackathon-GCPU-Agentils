@@ -50,6 +50,3 @@ def get_nutrient_analyzer() -> NutrientAnalyzerAgent:
     return _nutrient_analyzer
 
 
-def get_analyzer() -> FoodAnalyzerAgent:
-    """Alias pour get_food_analyzer (compatibilité avec l'ancien code)."""
-    return get_food_analyzer()
