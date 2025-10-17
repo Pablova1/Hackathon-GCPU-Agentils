@@ -5,6 +5,7 @@ from app.ai.onboarding_ai import suggest_followup
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
+
 @router.post("/start")
 async def start(user_id: str = Query(..., description="ID de l'utilisateur qui démarre l'onboarding")):
     """
@@ -16,11 +17,12 @@ async def start(user_id: str = Query(..., description="ID de l'utilisateur qui d
     }
     """
     try:
-        session = create_session(user_id)
+        session = await create_session(user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     question = first_question()
     return {"session_id": session["session_id"], "question": question}
+
 
 @router.get("/next")
 async def next_question(session_id: str = Query(..., description="ID de session d'onboarding")):
@@ -54,13 +56,14 @@ async def next_question(session_id: str = Query(..., description="ID de session 
             "finished": False,
             "question": question
         }
+    
     if nxt is None:
-        # Appel à l’IA avant de terminer
+        # Appel à l'IA avant de terminer
         asked_ai_count = sess.get("asked_ai_count", 0)
         ai_question = suggest_followup(slots, asked_ai_count)
 
         if ai_question:
-            # marquer qu’on a posé une question IA
+            # marquer qu'on a posé une question IA
             sess["asked_ai_count"] = asked_ai_count + 1
             return {
                 "session_id": session_id,
@@ -74,7 +77,8 @@ async def next_question(session_id: str = Query(..., description="ID de session 
             "finished": True,
             "profile_preview": slots
         }
-    
+
+
 @router.post("/end")
 async def end_onboarding(session_id: str = Query(..., description="ID de la session d'onboarding")):
     """
