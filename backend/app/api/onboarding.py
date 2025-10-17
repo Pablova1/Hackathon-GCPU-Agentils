@@ -50,6 +50,13 @@ async def answer_question(request: AnswerRequest):
     # Enregistrer la réponse
     slots = sess.get("slots", {})
     slots[request.slot] = request.value
+    
+    # Si c'est une question IA, stocker aussi le texte de la question
+    if request.slot.startswith("ai_followup_"):
+        last_ai_questions = sess.get("last_ai_questions", {})
+        if request.slot in last_ai_questions:
+            slots[f"{request.slot}_question"] = last_ai_questions[request.slot]
+    
     await update_session(request.session_id, {"slots": slots})
     
     # Déterminer la prochaine question
@@ -97,7 +104,13 @@ async def answer_question(request: AnswerRequest):
     
     if ai_question:
         new_count = asked_ai_count + 1
-        await update_session(request.session_id, {"asked_ai_count": new_count})
+        # Stocker le texte de la question IA pour pouvoir le récupérer plus tard
+        last_ai_questions = sess.get("last_ai_questions", {})
+        last_ai_questions[ai_question["slot"]] = ai_question["text"]
+        await update_session(request.session_id, {
+            "asked_ai_count": new_count,
+            "last_ai_questions": last_ai_questions
+        })
         return {
             "session_id": request.session_id,
             "accepted": True,
@@ -162,9 +175,14 @@ async def next_question(session_id: str = Query(...)):
     ai_question = suggest_followup(slots, asked_ai_count)
     
     if ai_question:
-        # IMPORTANT : Persister le compteur
+        # IMPORTANT : Persister le compteur et stocker le texte de la question
         new_count = asked_ai_count + 1
-        await update_session(session_id, {"asked_ai_count": new_count})
+        last_ai_questions = sess.get("last_ai_questions", {})
+        last_ai_questions[ai_question["slot"]] = ai_question["text"]
+        await update_session(session_id, {
+            "asked_ai_count": new_count,
+            "last_ai_questions": last_ai_questions
+        })
         
         return {
             "session_id": session_id,
@@ -240,20 +258,22 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
             age = 0
     
     # Extraire les réponses IA (slots qui commencent par "ai_followup_")
-    ai_responses = {}
+    # et stocker aussi les questions IA associées
+    ai_entries = []
     regular_slots = {}
     
     for key, value in slots.items():
         if key.startswith("ai_followup_"):
-            ai_responses[key] = value
-        else:
+            # Récupérer la question associée depuis la session si disponible
+            question_text = slots.get(f"{key}_question", "Question IA")
+            ai_entries.append(f"Q: {question_text} | R: {value}")
+        elif not key.endswith("_question"):  # Ignorer les clés de questions stockées
             regular_slots[key] = value
     
-    # Créer une note avec les réponses IA
+    # Créer une note avec les questions et réponses IA
     notes = None
-    if ai_responses:
-        notes_list = [f"{key}: {value}" for key, value in ai_responses.items()]
-        notes = "Informations supplémentaires - " + " | ".join(notes_list)
+    if ai_entries:
+        notes = "Informations supplémentaires - " + " || ".join(ai_entries)
     
     return {
         # ProfileCore
@@ -286,9 +306,9 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
         "performance": False,
         "maintainShape": False,
         
-        # Misc (avec les réponses IA dans notes)
+        # Misc (avec les questions et réponses IA dans notes)
         "activityLevel": regular_slots.get("activityLevel"),
         "sports": [],
         "occupation": None,
-        "notes": notes,  # Les réponses IA sont stockées ici
+        "notes": notes,  # Les questions et réponses IA sont stockées ici
     }

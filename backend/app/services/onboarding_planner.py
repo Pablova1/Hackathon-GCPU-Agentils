@@ -5,6 +5,7 @@ REQUIRED_SLOTS = [
     "gender",
     "heightCm",
     "weightKg",
+    "bodyType",
     "dietType",
     "activityLevel",
 ]
@@ -17,6 +18,8 @@ QUESTION_BANK = {
                      "choices": ["Male", "Female", "Other"]},
     "heightCm":     {"text": "Quelle est ta taille (en cm) ?", "type": "number"},
     "weightKg":     {"text": "Quel est ton poids (en kg) ?", "type": "number"},
+    "bodyType":     {"text": "Quel est ton type de morphologie ?", "type": "single_choice",
+                     "choices": ["ectomorphic", "mesomorphic", "endomorphic", "unknown"]},
     "dietType":     {"text": "As-tu un régime alimentaire particulier ?", "type": "single_choice",
                      "choices": ["omnivore","vegetarian","vegan","halal","kosher","autre"]},
     "activityLevel": {"text": "Quel est ton niveau d'activité physique ?", "type": "single_choice",
