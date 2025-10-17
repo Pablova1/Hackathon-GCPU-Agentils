@@ -54,6 +54,34 @@ export default function Home() {
     setResponse({ ...response, aliments: updatedAliments });
   };
 
+  const handleValidateAliments = async () => {
+    if (!response || !response.aliments) {
+      setError('No aliments to validate.');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:8000/api/analyze/nutrients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(response.aliments), // Send the list of aliments directly
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log('Nutrient analysis result:', data);
+      alert('Nutrient analysis completed! Check the console for details.');
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
       <h1>Food Analyzer</h1>
@@ -91,6 +119,7 @@ export default function Home() {
             ))}
           </ul>
           <button onClick={handleAddAliment}>Add Aliment</button>
+          <button onClick={handleValidateAliments}>Validate Aliments</button>
         </div>
       )}
     </div>

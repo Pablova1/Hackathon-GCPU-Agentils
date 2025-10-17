@@ -1,1 +1,7 @@
-# Initialization file for agent_assiette_1
+"""
+Agent d'analyse nutritionnelle.
+"""
+
+from .agent import NutrientAnalyzerAgent
+
+__all__ = ["NutrientAnalyzerAgent"]

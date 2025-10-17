@@ -5,13 +5,17 @@ Routes pour l'analyse d'assiettes.
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any
 import shutil
 from pathlib import Path
 import logging
+import uuid
+
+from fastapi.encoders import jsonable_encoder
 
 from app.core.config import settings
-from app.ai.agents.agent_initializer import get_analyzer
+# Modifie cette ligne pour importer les deux fonctions
+from app.ai.agents.agent_initializer import get_food_analyzer, get_nutrient_analyzer
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +52,7 @@ async def analyze_plate(file: UploadFile = File(...)):
         )
     
     # Récupération de l'agent
-    analyzer = get_analyzer()
+    analyzer = get_food_analyzer()
     
     # Génération d'un nom de fichier unique
     import uuid
@@ -110,15 +114,75 @@ async def analyze_plate(file: UploadFile = File(...)):
                 logger.warning(f"Impossible de supprimer {temp_file_path}: {e}")
 
 
+@router.post("/nutrients")
+async def analyze_nutrients(aliments: List[Aliment]):
+    """
+    Analyse les nutriments pour une liste d'aliments.
+
+    - **aliments**: Liste des aliments avec leur nom et quantité estimée.
+    """
+    try:
+        # Log the raw aliments for debugging
+        logger.info(f"Raw aliments received: {jsonable_encoder(aliments)}")
+
+        # Conversion des aliments en dictionnaire
+        aliments_data = [
+            {"nom": aliment.nom, "quantite_estimee": aliment.quantite_estimee}
+            for aliment in aliments
+        ]
+
+        # Log the structured aliments data
+        logger.info(f"Structured aliments data: {aliments_data}")
+
+        # Récupération de l'agent
+        nutrient_analyzer = get_nutrient_analyzer()
+
+        # Appel de l'analyse des nutriments
+        result = nutrient_analyzer.analyze_nutrients(aliments_data)
+
+        # Log the result from the nutrient analyzer
+        logger.info(f"Nutrient analysis result: {result}")
+
+        return {
+            "success": True,
+            "nutrients": result,
+            "message": "Analyse des nutriments réussie."
+        }
+
+    except ValueError as e:
+        logger.error(f"Erreur de parsing: {e}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erreur lors de l'analyse des nutriments: {str(e)}"
+        )
+
+    except Exception as e:
+        logger.error(f"Erreur lors de l'analyse des nutriments: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur interne: {str(e)}"
+        )
+
+
 @router.get("/health")
 async def health_check():
-    """Vérifie l'état de l'agent d'analyse."""
+    """Vérifie l'état des agents d'analyse."""
     try:
-        analyzer = get_analyzer()
+        food_analyzer = get_food_analyzer()
+        nutrient_analyzer = get_nutrient_analyzer()
+        
         return {
             "status": "healthy",
-            "agent": "ready",
-            "model": analyzer.model_name
+            "agents": {
+                "food_analyzer": {
+                    "status": "ready",
+                    "model": food_analyzer.model_name
+                },
+                "nutrient_analyzer": {
+                    "status": "ready",
+                    "model": nutrient_analyzer.model_name
+                }
+            }
         }
     except Exception as e:
         raise HTTPException(
