@@ -12,5 +12,13 @@ MONGO_DB = os.getenv("MONGO_DB")
 # Initialisation du client MongoDB 
 client = AsyncIOMotorClient(MONGO_URI)
 
-# On référence la base de données principale
+# Référencement de la base de données principale
 db = client[MONGO_DB]
+
+async def get_database():
+    """
+    Retourne la base MongoDB 'feel_good'
+    (utilisée par les services FastAPI pour insérer ou lire des données)
+    """
+    return db
+
