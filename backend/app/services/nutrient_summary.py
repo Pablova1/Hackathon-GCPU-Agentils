@@ -1,67 +1,15 @@
 def calculate_nutrient_summary(api_response):
     """
     Calculate the sum of nutritional values for a dish based on the API response.
-
+    
     Args:
-        api_response (dict): The response from the nutrient analysis API. Expected format:
-            {
-                "success": true,
-                "nutrients": {
-                    "foods_nutrition": [
-                        {
-                            "food": "Beef",
-                            "quantity": 190,
-                            "per_portion": {
-                                "nutritional_values": {
-                                    "energy_kcal": 437,
-                                    "proteins_g": 53.2,
-                                    "carbohydrates_g": 0,
-                                    "lipids_g": 22.8,
-                                    "fiber_g": 0,
-                                    "sugars_g": 0,
-                                    "saturated_fats_g": 9.5,
-                                    "unsaturated_fats_g": 13.3
-                                },
-                                "micronutrients": {
-                                    "calcium_mg": 28.5,
-                                    "iron_mg": 4.8,
-                                    "magnesium_mg": 47.5,
-                                    "potassium_mg": 665,
-                                    "sodium_mg": 114,
-                                    "zinc_mg": 9.5,
-                                    "phosphorus_mg": 437
-                                }
-                            }
-                        },
-                        ...
-                    ]
-                }
-            }
-
+        api_response (dict): The response from the nutrient analysis API.
+        Can be either:
+        - Direct response: {'foods_nutrition': [...]}
+        - Wrapped response: {'nutrients': {'foods_nutrition': [...]}}
+    
     Returns:
         dict: A JSON object containing the summed nutritional values.
-            {
-                "name": "Sum of ingredients",
-                "nutritional_values": {
-                    "energy_kcal": total_kcal,
-                    "proteins_g": total_proteins,
-                    "carbohydrates_g": total_carbs,
-                    "lipids_g": total_fats,
-                    "fiber_g": total_fiber,
-                    "sugars_g": total_sugars,
-                    "saturated_fats_g": total_saturated_fats,
-                    "unsaturated_fats_g": total_unsaturated_fats
-                },
-                "micronutrients": {
-                    "calcium_mg": total_calcium,
-                    "iron_mg": total_iron,
-                    "magnesium_mg": total_magnesium,
-                    "potassium_mg": total_potassium,
-                    "sodium_mg": total_sodium,
-                    "zinc_mg": total_zinc,
-                    "phosphorus_mg": total_phosphorus
-                }
-            }
     """
     total_nutritional_values = {
         "energy_kcal": 0,
@@ -73,7 +21,7 @@ def calculate_nutrient_summary(api_response):
         "saturated_fats_g": 0,
         "unsaturated_fats_g": 0
     }
-
+    
     total_micronutrients = {
         "calcium_mg": 0,
         "iron_mg": 0,
@@ -83,24 +31,58 @@ def calculate_nutrient_summary(api_response):
         "zinc_mg": 0,
         "phosphorus_mg": 0
     }
-
-    combined_food_names = ""
-
-    for food in api_response.get("nutrients", {}).get("foods_nutrition", []):
-        nutritional_values = food.get("per_portion", {}).get("nutritional_values", {})
-        micronutrients = food.get("per_portion", {}).get("micronutrients", {})
-
+    
+    combined_food_names = []
+    
+    print("=========Calculating nutrient summary from API response.=========")
+    print(f"Raw API response: {api_response}")
+    
+    # Gérer les deux formats possibles
+    # Format 1: {'nutrients': {'foods_nutrition': [...]}}
+    # Format 2: {'foods_nutrition': [...]}
+    if "nutrients" in api_response:
+        foods_list = api_response.get("nutrients", {}).get("foods_nutrition", [])
+    else:
+        foods_list = api_response.get("foods_nutrition", [])
+    
+    print(f"Foods list extracted: {len(foods_list)} foods found")
+    
+    # Parcourir les aliments
+    for food in foods_list:
+        per_portion = food.get("per_portion", {})
+        nutritional_values = per_portion.get("nutritional_values", {})
+        micronutrients = per_portion.get("micronutrients", {})
+        
+        # Debug logs
+        print(f"\nProcessing food: {food.get('food', '')}")
+        print(f"Nutritional values: {nutritional_values}")
+        print(f"Micronutrients: {micronutrients}")
+        
+        # Additionner les valeurs nutritionnelles
         for key in total_nutritional_values:
-            total_nutritional_values[key] += nutritional_values.get(key, 0)
-
+            value = nutritional_values.get(key, 0)
+            total_nutritional_values[key] += value
+            print(f"  {key}: added {value}, total now {total_nutritional_values[key]}")
+        
+        # Additionner les micronutriments
         for key in total_micronutrients:
-            total_micronutrients[key] += micronutrients.get(key, 0)
-
-        # Append the food name to the combined string
-        combined_food_names += food.get("food", "") + " "
-
+            value = micronutrients.get(key, 0)
+            total_micronutrients[key] += value
+            print(f"  {key}: added {value}, total now {total_micronutrients[key]}")
+        
+        # Ajouter le nom de l'aliment
+        food_name = food.get("food", "").strip()
+        if food_name:
+            combined_food_names.append(food_name)
+    
+    # Final state
+    print(f"\n=== FINAL RESULTS ===")
+    print(f"Foods: {', '.join(combined_food_names)}")
+    print(f"Total nutritional values: {total_nutritional_values}")
+    print(f"Total micronutrients: {total_micronutrients}")
+    
     return {
-        "name": combined_food_names.strip(),
+        "name": ", ".join(combined_food_names),
         "nutritional_values": total_nutritional_values,
         "micronutrients": total_micronutrients
     }

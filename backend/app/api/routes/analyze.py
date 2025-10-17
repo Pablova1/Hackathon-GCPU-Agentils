@@ -143,6 +143,14 @@ async def analyze_nutrients(aliments: List[Aliment]):
         # Log the result from the nutrient analyzer
         logger.info(f"Nutrient analysis result: {result}")
 
+        logger.info("=========On va faire la somme des nutriments=========")
+        # Connect the API output to the nutrient summary function
+        from app.services.nutrient_summary import calculate_nutrient_summary
+        nutrient_summary = calculate_nutrient_summary(result)
+
+        # Log the nutrient summary
+        logger.info(f"Nutrient summary: {nutrient_summary}")
+
         return {
             "success": True,
             "nutrients": result,

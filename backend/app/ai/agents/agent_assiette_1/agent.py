@@ -22,50 +22,54 @@ class NutrientAnalyzerAgent:
     """
 
     PROMPT_TEMPLATE = """
-    You are a nutrition expert.
-    Analyze the following list of foods and return complete nutritional values for each food item. 
-    List of detected foods: {aliments_json} For each food item, return a JSON with the following nutritional information: 
-    - Values for 100g 
-    - Values for the indicated quantity 
-    - Macronutrients: calories, proteins, carbohydrates, lipids, fiber, sugars, saturated fats 
-    - Main micronutrients: calcium, iron, magnesium, potassium, sodium, zinc, phosphorus JSON structure to return (WITHOUT markdown tags):
+    You are a nutrition expert. Analyze the following list of foods and return complete nutritional values for each food item.
+
+    List of detected foods:
+    {aliments_json}
+
+    For each food item, return a JSON with the following nutritional information:
+    - Values for the indicated quantity (per portion)
+    - Macronutrients: calories, proteins, carbohydrates, lipids, fiber, sugars, saturated fats, unsaturated fats
+    - Main micronutrients: calcium, iron, magnesium, potassium, sodium, zinc, phosphorus
+
+    JSON structure to return (WITHOUT markdown tags):
 
     {{
-        "foods_nutrition": [
-            {{
-            "food": "food name",
-            "quantity": quantity_integer,
-            "per_portion": {{
-                "nutritional_values": {{
-                    "energy_kcal": number,
-                    "proteins_g": number,
-                    "carbohydrates_g": number,
-                    "lipids_g": number,
-                    "fiber_g": number,
-                    "sugars_g": number,
-                    "saturated_fats_g": number,
-                    "unsaturated_fats_g": number
-                    }},
-                "micronutriments": {{
-                    "calcium_mg": number,
-                    "fer_mg": number,
-                    "magnesium_mg": number,
-                    "potassium_mg": number,
-                    "sodium_mg": number,
-                    "zinc_mg": number,
-                    "phosphore_mg": number
-                    }}
-                }},
+    "foods_nutrition": [
+        {{
+        "food": "food name",
+        "quantity": quantity_integer,
+        "per_portion": {{
+            "nutritional_values": {{
+            "energy_kcal": number,
+            "proteins_g": number,
+            "carbohydrates_g": number,
+            "lipids_g": number,
+            "fiber_g": number,
+            "sugars_g": number,
+            "saturated_fats_g": number,
+            "unsaturated_fats_g": number
+            }},
+            "micronutrients": {{
+            "calcium_mg": number,
+            "iron_mg": number,
+            "magnesium_mg": number,
+            "potassium_mg": number,
+            "sodium_mg": number,
+            "zinc_mg": number,
+            "phosphorus_mg": number
             }}
-        ]
+        }}
+        }}
+    ]
     }}
 
-
-
+    Use standard average nutritional values from reliable nutritional databases. If a food can vary depending on preparation method (grilled, boiled, raw, etc.), use the most common preparation method.
 
     IMPORTANT:
     - All numbers must be numeric values (not strings)
-    - "quantite" must be an integer
+    - "quantity" must be an integer representing grams
+    - All micronutrient field names must be in English: use "iron_mg" not "fer_mg", "phosphorus_mg" not "phosphore_mg"
     - Return ONLY the JSON, with no text before or after, and no markdown tags
     """
 
