@@ -19,7 +19,7 @@ async def create_session(user_id: str) -> dict:
         "state": "ASKING_QUESTIONS",
         "slots": {},
         "asked_ai_count": 0,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now().isoformat()
     }
     
     await sessions_collection.insert_one(session)

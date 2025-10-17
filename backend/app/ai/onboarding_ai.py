@@ -45,7 +45,8 @@ def suggest_followup(slots: dict, asked_ai_count: int) -> dict | None:
         return None
     
     return {
-        "question": text,
-        "source": "ai",
-        "asked_ai_count": asked_ai_count + 1
+        "slot": f"ai_followup_{asked_ai_count}",  # ← Slot unique pour chaque question IA
+        "text": text,
+        "type": "text",
+        "source": "ai"
     }

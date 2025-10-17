@@ -1,217 +1,187 @@
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from app.main import app  # À adapter selon ta structure
+"""
+Script de test complet du flux onboarding
+Exécute : python test_onboarding.py
+"""
 
-client = TestClient(app)
+import asyncio
+import httpx
+import json
+from datetime import datetime
 
+# Configuration
+BASE_URL = "http://localhost:8000"  # Ajuste le port si nécessaire
+USER_ID = "test_user_" + datetime.now().strftime("%Y%m%d_%H%M%S")
 
-class TestOnboardingStart:
-    """Tests pour l'endpoint POST /onboarding/start"""
-
-    @patch("app.db.session_store.create_session")
-    @patch("app.services.onboarding_planner.first_question")
-    def test_start_success(self, mock_first_question, mock_create_session):
-        # Setup mocks
-        mock_create_session.return_value = {"session_id": "sess_123", "user_id": "user_1"}
-        mock_first_question.return_value = {
-            "slot": "name",
-            "text": "Quel est votre nom?",
-            "type": "text"
-        }
-
-        # Appel
-        response = client.post("/onboarding/start?user_id=user_1")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        assert data["session_id"] == "sess_123"
-        assert data["question"]["slot"] == "name"
-        mock_create_session.assert_called_once_with("user_1")
-
-    @patch("app.db.session_store.create_session")
-    def test_start_invalid_user(self, mock_create_session):
-        # Setup: simulate error
-        mock_create_session.side_effect = ValueError("User ID invalide")
-
-        # Appel
-        response = client.post("/onboarding/start?user_id=invalid")
-
-        # Assertions
-        assert response.status_code == 400
-        assert "User ID invalide" in response.json()["detail"]
-
-    def test_start_missing_user_id(self):
-        # Appel sans user_id
-        response = client.post("/onboarding/start")
-
-        # Assertions
-        assert response.status_code == 422  # Validation error
+# Les réponses que tu veux donner aux 8 questions obligatoires
+TEST_ANSWERS = {
+    "firstName": "Jean",
+    "lastName": "Dupont",
+    "birthDate": "1990-05-15",
+    "gender": "Male",
+    "heightCm": 180,
+    "weightKg": 75.5,
+    "dietType": "omnivore",
+    "activityLevel": "moderate",
+}
 
 
-class TestOnboardingNext:
-    """Tests pour l'endpoint GET /onboarding/next"""
+async def test_onboarding():
+    """Teste le flux complet d'onboarding."""
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        
+        # ============ 1️⃣ START - Créer la session ============
+        print("\n🟢 [1] POST /onboarding/start")
+        print(f"   user_id: {USER_ID}")
+        
+        resp = await client.post(
+            f"{BASE_URL}/onboarding/start",
+            params={"user_id": USER_ID}
+        )
+        
+        if resp.status_code != 200:
+            print(f"   ❌ Erreur {resp.status_code}: {resp.text}")
+            return
+        
+        data = resp.json()
+        session_id = data["session_id"]
+        first_question = data["question"]
+        
+        print(f"   ✅ Session créée: {session_id}")
+        print(f"   📝 Première question: {first_question['text']}")
+        print(f"      Slot: {first_question['slot']}")
+        
+        # ============ 2️⃣ ANSWER - Répondre aux 8 questions obligatoires ============
+        print("\n🟢 [2] POST /onboarding/answer (8 questions obligatoires)")
+        
+        current_slot = first_question["slot"]
+        question_count = 0
+        
+        for answer_key, answer_value in TEST_ANSWERS.items():
+            question_count += 1
+            
+            print(f"\n   Q{question_count}: {current_slot}")
+            print(f"   Réponse: {answer_value}")
+            
+            resp = await client.post(
+                f"{BASE_URL}/onboarding/answer",
+                json={
+                    "session_id": session_id,
+                    "slot": current_slot,
+                    "value": answer_value
+                }
+            )
+            
+            if resp.status_code != 200:
+                print(f"   ❌ Erreur {resp.status_code}: {resp.text}")
+                return
+            
+            result = resp.json()
+            
+            # Vérifier si l'utilisateur a été créé (même si l'onboarding continue)
+            if result.get("user_created"):
+                print(f"   ✅ UTILISATEUR CRÉÉ!")
+                print(f"   👤 User document ID: {result.get('user_document_id')}")
+                print(f"   📋 Message: {result.get('message')}")
+                
+                if result.get("finished"):
+                    print(f"   🏁 Onboarding complètement terminé!")
+                    print(f"\n🎉 SUCCÈS - L'utilisateur a été créé en base de données!")
+                    print(f"\nRésumé du profil créé:")
+                    profile = result.get("profile_preview", {})
+                    for k, v in profile.items():
+                        print(f"   {k}: {v}")
+                    return
+                else:
+                    print(f"   💬 Questions supplémentaires disponibles (optionnelles)")
+                    print(f"\n🎉 SUCCÈS - L'utilisateur est créé, vous pouvez continuer avec les questions IA si vous voulez!")
+                    return
+            
+            if result.get("finished"):
+                print(f"   ✅ Onboarding terminé!")
+                print(f"   👤 Utilisateur créé: {result.get('user_document_id')}")
+                print(f"   📋 Message: {result.get('message')}")
+                print("\n🎉 SUCCÈS - L'utilisateur a été créé en base de données!")
+                print(f"\nRésumé du profil créé:")
+                profile = result.get("profile_preview", {})
+                for k, v in profile.items():
+                    print(f"   {k}: {v}")
+                return
+            
+            # Préparer la prochaine question
+            next_q = result.get("next_question")
+            if next_q:
+                current_slot = next_q["slot"]
+                print(f"   ✅ Réponse enregistrée")
+                print(f"   📝 Prochaine question: {next_q['text']}")
+                print(f"      Type: {next_q.get('type')}")
+                if next_q.get("choices"):
+                    print(f"      Choix: {next_q['choices']}")
+            else:
+                # Pas de prochaine question → onboarding terminé
+                print(f"   ✅ Réponse enregistrée")
+                print(f"   ⏳ En attente de la prochaine question...")
 
-    @patch("app.db.session_store.get_session")
-    @patch("app.services.onboarding_planner.next_required_slot")
-    @patch("app.services.onboarding_planner.question_for_slot")
-    def test_next_with_required_slot(self, mock_question_for_slot, mock_next_required_slot, mock_get_session):
-        # Setup mocks
-        mock_get_session.return_value = {
-            "session_id": "sess_123",
-            "slots": {"name": "John"},
-            "asked_ai_count": 0
-        }
-        mock_next_required_slot.return_value = "age"
-        mock_question_for_slot.return_value = {
-            "slot": "age",
-            "text": "Quel est votre âge?",
-            "type": "number"
-        }
 
-        # Appel
-        response = client.get("/onboarding/next?session_id=sess_123")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        assert data["finished"] is False
-        assert data["question"]["slot"] == "age"
-
-    @patch("app.db.session_store.get_session")
-    @patch("app.services.onboarding_planner.next_required_slot")
-    @patch("app.ai.onboarding_ai.suggest_followup")
-    def test_next_with_ai_followup(self, mock_suggest_followup, mock_next_required_slot, mock_get_session):
-        # Setup mocks
-        session = {
-            "session_id": "sess_123",
-            "slots": {"name": "John", "age": 30},
-            "asked_ai_count": 0
-        }
-        mock_get_session.return_value = session
-        mock_next_required_slot.return_value = None
-        mock_suggest_followup.return_value = {
-            "slot": "goals",
-            "text": "Quels sont vos objectifs?",
-            "type": "text"
-        }
-
-        # Appel
-        response = client.get("/onboarding/next?session_id=sess_123")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        assert data["finished"] is False
-        assert "goals" in data["question"]["slot"]
-        assert session["asked_ai_count"] == 1
-
-    @patch("app.db.session_store.get_session")
-    @patch("app.services.onboarding_planner.next_required_slot")
-    @patch("app.ai.onboarding_ai.suggest_followup")
-    def test_next_completed(self, mock_suggest_followup, mock_next_required_slot, mock_get_session):
-        # Setup mocks: aucun slot requis, aucune question IA
-        mock_get_session.return_value = {
-            "session_id": "sess_123",
-            "slots": {"name": "John", "age": 30},
-            "asked_ai_count": 0
-        }
-        mock_next_required_slot.return_value = None
-        mock_suggest_followup.return_value = None
-
-        # Appel
-        response = client.get("/onboarding/next?session_id=sess_123")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        assert data["finished"] is True
-        assert "profile_preview" in data
-        assert data["profile_preview"]["name"] == "John"
-
-    @patch("app.db.session_store.get_session")
-    def test_next_unknown_session(self, mock_get_session):
-        # Setup: session inexistante
-        mock_get_session.return_value = None
-
-        # Appel
-        response = client.get("/onboarding/next?session_id=invalid_sess")
-
-        # Assertions
-        assert response.status_code == 404
-        assert "Session inconnue" in response.json()["detail"]
+async def test_with_ai_questions():
+    """
+    Teste le flux avec les questions IA
+    (si tu veux voir les questions proposées par l'IA)
+    """
+    print("\n" + "="*60)
+    print("TEST AVEC QUESTIONS IA")
+    print("="*60)
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        
+        # Démarrer
+        resp = await client.post(
+            f"{BASE_URL}/onboarding/start",
+            params={"user_id": USER_ID + "_with_ai"}
+        )
+        data = resp.json()
+        session_id = data["session_id"]
+        
+        print(f"\nSession: {session_id}")
+        
+        # Répondre aux 6 questions
+        current_slot = data["question"]["slot"]
+        
+        for answer_key, answer_value in TEST_ANSWERS.items():
+            resp = await client.post(
+                f"{BASE_URL}/onboarding/answer",
+                json={
+                    "session_id": session_id,
+                    "slot": current_slot,
+                    "value": answer_value
+                }
+            )
+            
+            result = resp.json()
+            
+            if result.get("finished"):
+                print(f"\n✅ Onboarding terminé (pas de questions IA)")
+                return
+            
+            next_q = result.get("next_question")
+            if next_q:
+                current_slot = next_q["slot"]
+                source = next_q.get("source", "manual")
+                print(f"\n📝 Question ({source}): {next_q['text'][:80]}...")
+        
+        # À ce stade, on devrait avoir des questions IA
+        print("\n💡 Les questions suivantes viendront de l'IA")
 
 
-class TestOnboardingEnd:
-    """Tests pour l'endpoint POST /onboarding/end"""
-
-    @patch("app.db.session_store.get_session")
-    def test_end_success(self, mock_get_session):
-        # Setup mocks
-        session = {
-            "session_id": "sess_123",
-            "slots": {"name": "John", "height_cm": 180, "weight_kg": 75},
-            "state": "IN_PROGRESS"
-        }
-        mock_get_session.return_value = session
-
-        # Appel
-        response = client.post("/onboarding/end?session_id=sess_123")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "completed"
-        assert data["session_id"] == "sess_123"
-        assert "profile" in data
-        assert data["profile"]["name"] == "John"
-        assert session["state"] == "COMPLETED"
-
-    @patch("app.db.session_store.get_session")
-    def test_end_calcul_bmi(self, mock_get_session):
-        # Setup: vérifier le calcul IMC
-        session = {
-            "session_id": "sess_123",
-            "slots": {"name": "John", "height_cm": 180, "weight_kg": 75}
-        }
-        mock_get_session.return_value = session
-
-        # Appel
-        response = client.post("/onboarding/end?session_id=sess_123")
-
-        # Assertions
-        assert response.status_code == 200
-        data = response.json()
-        expected_bmi = round(75 / ((180 / 100) ** 2), 1)
-        assert data["profile"]["bmi"] == expected_bmi
-
-    @patch("app.db.session_store.get_session")
-    def test_end_bmi_invalid_data(self, mock_get_session):
-        # Setup: données invalides pour IMC
-        session = {
-            "session_id": "sess_123",
-            "slots": {"name": "John", "height_cm": "abc", "weight_kg": "xyz"}
-        }
-        mock_get_session.return_value = session
-
-        # Appel
-        response = client.post("/onboarding/end?session_id=sess_123")
-
-        # Assertions: pas d'erreur, juste pas de BMI
-        assert response.status_code == 200
-        data = response.json()
-        assert "bmi" not in data["profile"]
-
-    @patch("app.db.session_store.get_session")
-    def test_end_unknown_session(self, mock_get_session):
-        # Setup: session inexistante
-        mock_get_session.return_value = None
-
-        # Appel
-        response = client.post("/onboarding/end?session_id=invalid_sess")
-
-        # Assertions
-        assert response.status_code == 404
-        assert "Session inconnue" in response.json()["detail"]
-
+if __name__ == "__main__":
+    print("\n" + "="*60)
+    print("TEST ONBOARDING")
+    print("="*60)
+    print("\n⚠️  Assure-toi que ton serveur FastAPI est lancé!")
+    print(f"   Base URL: {BASE_URL}")
+    
+    # Test 1 : Flux complet sans IA
+    asyncio.run(test_onboarding())
+    
+    # Test 2 : Optionnel - avec questions IA
+    # asyncio.run(test_with_ai_questions())

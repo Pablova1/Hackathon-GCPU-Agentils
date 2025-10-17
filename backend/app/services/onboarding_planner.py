@@ -1,23 +1,26 @@
-# Slots requis (MVP)
 REQUIRED_SLOTS = [
-    "first_name",
-    "birth_date",
-    "height_cm",
-    "weight_kg",
-    "diet_type",
-    "activity_level",
+    "firstName",
+    "lastName",
+    "birthDate",
+    "gender",
+    "heightCm",
+    "weightKg",
+    "dietType",
+    "activityLevel",
 ]
 
-# Banque de questions minimaliste
 QUESTION_BANK = {
-    "first_name":     {"text": "Quel est ton prénom ?", "type": "text"},
-    "birth_date":     {"text": "Quelle est ta date de naissance ? (YYYY-MM-DD)", "type": "text"},
-    "height_cm":      {"text": "Quelle est ta taille (en cm) ?", "type": "number"},
-    "weight_kg":      {"text": "Quel est ton poids (en kg) ?", "type": "number"},
-    "diet_type":      {"text": "As-tu un régime alimentaire particulier ?", "type": "single_choice",
-                       "choices": ["omnivore","vegetarian","vegan","halal","kosher","autre"]},
-    "activity_level": {"text": "Quel est ton niveau d’activité ?", "type": "single_choice",
-                       "choices": ["sedentary","light","moderate","active","very_active"]},
+    "firstName":    {"text": "Quel est ton prénom ?", "type": "text"},
+    "lastName":     {"text": "Quel est ton nom de famille ?", "type": "text"},
+    "birthDate":    {"text": "Quelle est ta date de naissance ? (YYYY-MM-DD)", "type": "text"},
+    "gender":       {"text": "Quel est ton genre ?", "type": "single_choice",
+                     "choices": ["Male", "Female", "Other"]},
+    "heightCm":     {"text": "Quelle est ta taille (en cm) ?", "type": "number"},
+    "weightKg":     {"text": "Quel est ton poids (en kg) ?", "type": "number"},
+    "dietType":     {"text": "As-tu un régime alimentaire particulier ?", "type": "single_choice",
+                     "choices": ["omnivore","vegetarian","vegan","halal","kosher","autre"]},
+    "activityLevel": {"text": "Quel est ton niveau d'activité physique ?", "type": "single_choice",
+                      "choices": ["low","moderate","high"]},
 }
 
 def first_question() -> dict:
