@@ -1,9 +1,7 @@
 """
-Agent d'analyse de composition d'assiettes.
-Utilise Google Gemini pour identifier les aliments dans une image.
+Agent d'analyse d'assiettes.
 """
 
-from .agent import FoodAnalyzerAgent
+from .agent import FoodAnalyzerAgent, analyze_plate_simple
 
-__version__ = "1.0.0"
-__all__ = ["FoodAnalyzerAgent"]
+__all__ = ["FoodAnalyzerAgent", "analyze_plate_simple"]
