@@ -265,7 +265,10 @@ async def get_home_stats(user_id: str) -> dict:
         Dictionnaire avec les statistiques :
         - total_meals_scanned: nombre total de plats scannés
         - current_month_calendar: calendrier du mois en cours
+        - weekly_score: note hebdomadaire calculée par l'IA (1-5) avec commentaire
     """
+    from app.ai.homepage_ai import calculate_weekly_score
+    
     # Nombre total de plats scannés
     total_meals = await count_user_meals(user_id)
     
@@ -273,7 +276,47 @@ async def get_home_stats(user_id: str) -> dict:
     now = datetime.utcnow()
     monthly_calendar = await get_monthly_calendar(user_id, now.year, now.month)
     
+    # Récupérer les plats de la semaine et calculer la note
+    weekly_meals = await get_weekly_meals(user_id)
+    weekly_score = calculate_weekly_score(weekly_meals)
+    
     return {
         "total_meals_scanned": total_meals,
-        "current_month_calendar": monthly_calendar
+        "current_month_calendar": monthly_calendar,
+        "weekly_score": weekly_score
     }
+
+
+
+async def get_weekly_meals(user_id: str) -> List[dict]:
+    """
+    Récupère les repas de la semaine écoulée (7 derniers jours).
+    
+    Args:
+        user_id: ID de l'utilisateur
+    
+    Returns:
+        Liste des repas de la semaine
+    """
+    from datetime import timedelta
+    
+    db = await get_database()
+    meals_collection = db["meals"]
+    
+    # Date d'aujourd'hui à minuit
+    now = datetime.utcnow()
+    end_date = datetime(now.year, now.month, now.day, 23, 59, 59)
+    # 7 jours en arrière
+    start_date = end_date - timedelta(days=7)
+    
+    cursor = meals_collection.find({
+        "userId": user_id,
+        "dateScanned": {
+            "$gte": start_date,
+            "$lte": end_date
+        }
+    }).sort("dateScanned", -1)
+    
+    meals = await cursor.to_list(length=None)
+    return meals
+

@@ -16,7 +16,8 @@ from app.db.meal_store import (
     delete_user_meals,
     count_user_meals,
     get_monthly_calendar,
-    get_home_stats
+    get_home_stats,
+    get_weekly_meals
 )
 
 router = APIRouter(prefix="/meals", tags=["meals"])
@@ -261,10 +262,46 @@ async def get_user_home_stats(user_id: str):
     Retourne:
     - **total_meals_scanned**: nombre total de plats scannés
     - **current_month_calendar**: calendrier du mois en cours avec les jours où des plats ont été scannés
+    - **weekly_score**: note hebdomadaire (1-5) calculée par l'IA avec un commentaire
+        - score: note entre 1 et 5
+        - comment: commentaire encourageant de l'IA
     """
     try:
         stats = await get_home_stats(user_id)
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@router.get("/user/{user_id}/weekly-score")
+async def get_user_weekly_score(user_id: str):
+    """
+    Calcule la note hebdomadaire basée sur les plats scannés durant les 7 derniers jours.
+    
+    - **user_id**: ID de l'utilisateur
+    
+    Retourne:
+    - **score**: note entre 1 et 5
+    - **comment**: commentaire encourageant de l'IA nutritionniste
+    - **meals_count**: nombre de repas analysés dans la semaine
+    """
+    try:
+        from app.ai.homepage_ai import calculate_weekly_score
+        
+        weekly_meals = await get_weekly_meals(user_id)
+        weekly_score = calculate_weekly_score(weekly_meals)
+        
+        if weekly_score is None:
+            raise HTTPException(status_code=500, detail="Erreur lors du calcul de la note")
+        
+        return {
+            **weekly_score,
+            "meals_count": len(weekly_meals)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
 
