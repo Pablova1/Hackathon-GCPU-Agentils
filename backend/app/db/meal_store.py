@@ -201,3 +201,79 @@ async def count_user_meals(user_id: str) -> int:
     
     count = await meals_collection.count_documents({"userId": user_id})
     return count
+
+
+async def get_monthly_calendar(user_id: str, year: int, month: int) -> dict:
+    """
+    Récupère le calendrier mensuel avec les jours où des plats ont été scannés.
+    
+    Args:
+        user_id: ID de l'utilisateur
+        year: Année (ex: 2025)
+        month: Mois (1-12)
+    
+    Returns:
+        Dictionnaire avec les informations du calendrier :
+        - year: année
+        - month: mois
+        - days_with_meals: liste des jours (1-31) où au moins un plat a été scanné
+        - total_meals_in_month: nombre total de plats scannés ce mois
+    """
+    from calendar import monthrange
+    
+    db = await get_database()
+    meals_collection = db["meals"]
+    
+    # Calculer le premier et dernier jour du mois
+    _, last_day = monthrange(year, month)
+    start_date = datetime(year, month, 1, 0, 0, 0)
+    end_date = datetime(year, month, last_day, 23, 59, 59)
+    
+    # Récupérer tous les repas du mois
+    cursor = meals_collection.find({
+        "userId": user_id,
+        "dateScanned": {
+            "$gte": start_date,
+            "$lte": end_date
+        }
+    })
+    
+    meals = await cursor.to_list(length=None)
+    
+    # Extraire les jours uniques où des plats ont été scannés
+    days_with_meals = set()
+    for meal in meals:
+        day = meal["dateScanned"].day
+        days_with_meals.add(day)
+    
+    return {
+        "year": year,
+        "month": month,
+        "days_with_meals": sorted(list(days_with_meals)),
+        "total_meals_in_month": len(meals)
+    }
+
+
+async def get_home_stats(user_id: str) -> dict:
+    """
+    Récupère les statistiques pour la page d'accueil.
+    
+    Args:
+        user_id: ID de l'utilisateur
+    
+    Returns:
+        Dictionnaire avec les statistiques :
+        - total_meals_scanned: nombre total de plats scannés
+        - current_month_calendar: calendrier du mois en cours
+    """
+    # Nombre total de plats scannés
+    total_meals = await count_user_meals(user_id)
+    
+    # Calendrier du mois en cours
+    now = datetime.utcnow()
+    monthly_calendar = await get_monthly_calendar(user_id, now.year, now.month)
+    
+    return {
+        "total_meals_scanned": total_meals,
+        "current_month_calendar": monthly_calendar
+    }

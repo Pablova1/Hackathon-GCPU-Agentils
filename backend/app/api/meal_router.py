@@ -14,7 +14,9 @@ from app.db.meal_store import (
     update_meal,
     delete_meal,
     delete_user_meals,
-    count_user_meals
+    count_user_meals,
+    get_monthly_calendar,
+    get_home_stats
 )
 
 router = APIRouter(prefix="/meals", tags=["meals"])
@@ -221,3 +223,48 @@ async def get_user_meals_count(user_id: str):
         return {"count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@router.get("/user/{user_id}/monthly-calendar")
+async def get_user_monthly_calendar(
+    user_id: str,
+    year: int = Query(..., description="Année (ex: 2025)"),
+    month: int = Query(..., ge=1, le=12, description="Mois (1-12)")
+):
+    """
+    Récupère le calendrier mensuel avec les jours où des plats ont été scannés.
+    
+    - **user_id**: ID de l'utilisateur
+    - **year**: Année (ex: 2025)
+    - **month**: Mois (1-12)
+    
+    Retourne:
+    - **year**: année
+    - **month**: mois
+    - **days_with_meals**: liste des jours où au moins un plat a été scanné
+    - **total_meals_in_month**: nombre total de plats scannés ce mois
+    """
+    try:
+        calendar_data = await get_monthly_calendar(user_id, year, month)
+        return calendar_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+@router.get("/user/{user_id}/home-stats")
+async def get_user_home_stats(user_id: str):
+    """
+    Récupère les statistiques pour la page d'accueil.
+    
+    - **user_id**: ID de l'utilisateur
+    
+    Retourne:
+    - **total_meals_scanned**: nombre total de plats scannés
+    - **current_month_calendar**: calendrier du mois en cours avec les jours où des plats ont été scannés
+    """
+    try:
+        stats = await get_home_stats(user_id)
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
