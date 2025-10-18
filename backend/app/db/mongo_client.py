@@ -1,9 +1,12 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 # Charger les variables d'environnement (.env)
-load_dotenv()
+# Chercher le .env à la racine du projet (3 niveaux au-dessus)
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 # Récupération des infos de connexion
 MONGO_URI = os.getenv("MONGO_URI")

@@ -6,12 +6,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement
-load_dotenv()
-
 # Chemins
 BASE_DIR = Path(__file__).parent.parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads"
+
+# Charger les variables d'environnement depuis la racine du projet
+env_path = BASE_DIR.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 # Créer le dossier uploads
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

@@ -61,7 +61,9 @@ class FoodAnalyzerAgent:
             load_env: Si True, charge les variables d'environnement depuis .env
         """
         if load_env:
-            load_dotenv()
+            from pathlib import Path
+            env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+            load_dotenv(dotenv_path=env_path)
         
         # Récupère la clé API
         self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
