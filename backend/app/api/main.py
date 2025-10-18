@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.api.routes import api_router
 from app.api.onboarding import router as onboarding_router
 from app.api.profile_router import router as profile_router
+from app.api.meal_router import router as meal_router
 
 # Configuration du logging
 logging.basicConfig(
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 app.include_router(onboarding_router)  # Sans préfixe /api
 app.include_router(profile_router)     # Sans préfixe /api
+app.include_router(meal_router)        # Sans préfixe /api
 
 
 # Routes principales
