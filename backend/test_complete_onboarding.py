@@ -9,7 +9,7 @@ from app.db.mongo_client import get_database
 BASE_URL = "http://localhost:8000"
 USER_ID = "test_complet_" + datetime.now().strftime("%Y%m%d_%H%M%S")
 
-# Les 8 questions obligatoires
+# Les 9 questions obligatoires
 TEST_ANSWERS = {
     "firstName": "Sophie",
     "lastName": "Martin",
@@ -17,6 +17,7 @@ TEST_ANSWERS = {
     "gender": "Female",
     "heightCm": 168,
     "weightKg": 62.0,
+    "bodyType": "mesomorphic",
     "dietType": "vegetarian",
     "activityLevel": "high",
 }
@@ -24,10 +25,11 @@ TEST_ANSWERS = {
 async def test_complete_flow():
     """Teste le flux complet avec questions obligatoires + IA."""
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # Timeout augmenté à 120s pour MongoDB Atlas (première connexion peut être lente)
+    async with httpx.AsyncClient(timeout=120.0) as client:
         
         print(f"\n{'='*70}")
-        print(f"TEST COMPLET - ONBOARDING AVEC 8 QUESTIONS + IA")
+        print(f"TEST COMPLET - ONBOARDING AVEC 9 QUESTIONS + IA")
         print(f"{'='*70}")
         print(f"\n👤 User ID: {USER_ID}")
         
