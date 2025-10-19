@@ -1,4 +1,11 @@
-from nutrient_summary import calculate_nutrient_summary
+import sys
+from pathlib import Path
+
+# Ajouter le dossier backend au path pour permettre les imports
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
+
+from app.services.nutrient_summary import calculate_nutrient_summary
 
 def main():
     # Example API response to test the function
