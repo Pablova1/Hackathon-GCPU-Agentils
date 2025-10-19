@@ -1,8 +1,16 @@
+"""
+Routes pour la gestion des profils utilisateur.
+
+Endpoints:
+- POST /start: Crée un nouveau profil utilisateur complet
+"""
+
 from fastapi import APIRouter, HTTPException
 from app.models.profile_model import UserDocument
-from app.services.profile_services import save_user_profile  
+from app.services.profile_services import save_user_profile
 
-router = APIRouter(prefix="/profile", tags=["Profiling"])
+# Router sans préfixe (ajouté dans routes/__init__.py)
+router = APIRouter()
 
 @router.post("/start")
 async def create_profile(data: UserDocument) -> dict:

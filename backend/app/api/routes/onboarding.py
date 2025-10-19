@@ -1,3 +1,11 @@
+"""
+Routes pour le processus d'onboarding utilisateur.
+
+Endpoints:
+- POST /start: Démarre une session d'onboarding
+- POST /answer: Enregistre une réponse et retourne la prochaine question
+"""
+
 from fastapi import APIRouter, HTTPException, Query, Body
 from app.db.session_store import create_session, get_session, update_session
 from app.db.user_store import create_user_document
@@ -9,7 +17,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+# Router sans préfixe (ajouté dans routes/__init__.py)
+router = APIRouter()
 
 
 class AnswerRequest(BaseModel):

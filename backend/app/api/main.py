@@ -9,8 +9,6 @@ import logging
 
 from app.core.config import settings
 from app.api.routes import api_router
-from app.api.onboarding import router as onboarding_router
-from app.api.profile_router import router as profile_router
 
 # Configuration du logging
 logging.basicConfig(
@@ -23,7 +21,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.API_TITLE,
     version=settings.API_VERSION,
-    description="API pour analyser la composition d'assiettes à partir d'images",
+    description="API pour analyser la composition d'assiettes à partir d'images et gérer les profils utilisateurs",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -37,10 +35,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclusion des routes
+# Inclusion de toutes les routes avec préfixe /api
 app.include_router(api_router, prefix="/api")
-app.include_router(onboarding_router)  # Sans préfixe /api
-app.include_router(profile_router)     # Sans préfixe /api
 
 
 # Routes principales
@@ -51,10 +47,21 @@ async def root():
         "message": f"Bienvenue sur {settings.API_TITLE}",
         "version": settings.API_VERSION,
         "docs": "/docs",
-        "health": "/api/analyze/health",
+        "redoc": "/redoc",
+        "health": "/health",
         "endpoints": {
-            "analyze_plate": "POST /api/analyze/plate",
-            "analyze_nutrients": "POST /api/analyze/nutrients"
+            "analyze": {
+                "plate": "POST /api/analyze/plate",
+                "nutrients": "POST /api/analyze/nutrients",
+                "health": "GET /api/analyze/health"
+            },
+            "onboarding": {
+                "start": "POST /api/onboarding/start",
+                "answer": "POST /api/onboarding/answer"
+            },
+            "profile": {
+                "create": "POST /api/profile/start"
+            }
         }
     }
 
