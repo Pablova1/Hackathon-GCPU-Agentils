@@ -66,7 +66,9 @@ class OnboardingAgent:
         """
         if load_env:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
-            load_dotenv(dotenv_path=env_path)
+            logger.debug(f"Chargement du .env depuis: {env_path}")
+            logger.debug(f"Fichier existe: {env_path.exists()}")
+            load_dotenv(dotenv_path=env_path, override=True)
         
         # Récupération des variables d'environnement
         self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
@@ -74,6 +76,10 @@ class OnboardingAgent:
         self.region = region or os.getenv('GCP_REGION') or os.getenv('REGION', 'us-central1')
         self.system_prompt = system_prompt or os.getenv('AI_SYSTEM_PROMPT') or self.DEFAULT_SYSTEM_PROMPT
         self.max_questions = max_questions
+        
+        logger.debug(f"API Key chargée: {bool(self.api_key)}")
+        logger.debug(f"Project ID: {self.project_id}")
+        logger.debug(f"Region: {self.region}")
         
         if not self.api_key:
             raise ValueError(
@@ -139,7 +145,7 @@ class OnboardingAgent:
     
     def _call_gemini_api(self, prompt: str, timeout: int = 20) -> Optional[str]:
         """
-        Appelle l'API Google Gemini via Vertex AI.
+        Appelle l'API Google Gemini (generativelanguage).
         
         Args:
             prompt: Le prompt à envoyer à l'API
@@ -148,11 +154,9 @@ class OnboardingAgent:
         Returns:
             La réponse de l'IA ou None en cas d'erreur
         """
-        url = (
-            f"https://aiplatform.googleapis.com/v1/projects/{self.project_id}/"
-            f"locations/{self.region}/publishers/google/models/gemini-2.5-flash:generateContent"
-            f"?key={self.api_key}"
-        )
+        # Utiliser l'API Google AI (generativelanguage) au lieu de Vertex AI
+        # Cette API fonctionne avec juste une clé API, sans OAuth2
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={self.api_key}"
         
         payload = {
             "contents": [
