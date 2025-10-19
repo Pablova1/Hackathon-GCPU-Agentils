@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Body
 from app.db.session_store import create_session, get_session, update_session
 from app.db.user_store import create_user_document
 from app.services.onboarding_planner import QUESTION_BANK, first_question, next_required_slot, question_for_slot
-from app.ai.onboarding_ai import suggest_followup
+from app.ai.agents.agent_onboarding.agent import suggest_followup
 from pydantic import BaseModel
 from datetime import datetime
 import logging
