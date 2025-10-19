@@ -3,7 +3,14 @@ Test complet du nouveau flux d'onboarding avec 8 questions + réponses IA
 """
 import asyncio
 import httpx
+import sys
 from datetime import datetime
+from pathlib import Path
+
+# Ajouter le dossier backend au path pour permettre les imports
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
+
 from app.db.mongo_client import get_database
 
 BASE_URL = "http://localhost:8000"

@@ -2,6 +2,13 @@
 Test rapide pour vérifier que les utilisateurs sont créés dans 'user'
 """
 import asyncio
+import sys
+from pathlib import Path
+
+# Ajouter le dossier backend au path pour permettre les imports
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
+
 from app.db.user_store import create_user_document
 from app.db.mongo_client import get_database
 from datetime import datetime

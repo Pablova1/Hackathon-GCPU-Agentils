@@ -89,7 +89,9 @@ class NutrientAnalyzerAgent:
         """
         if load_env:
             from pathlib import Path
-            env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+            # Remonter 6 niveaux pour atteindre la racine du projet
+            # agent.py -> agent_assiette_1 -> agents -> ai -> app -> backend -> PROJECT_ROOT
+            env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
         # Récupère la clé API

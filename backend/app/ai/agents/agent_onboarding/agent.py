@@ -65,7 +65,9 @@ class OnboardingAgent:
             load_env: Si True, charge les variables d'environnement depuis .env
         """
         if load_env:
-            env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+            # Remonter 6 niveaux pour atteindre la racine du projet
+            # agent.py -> agent_onboarding -> agents -> ai -> app -> backend -> PROJECT_ROOT
+            env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             logger.debug(f"Chargement du .env depuis: {env_path}")
             logger.debug(f"Fichier existe: {env_path.exists()}")
             load_dotenv(dotenv_path=env_path, override=True)

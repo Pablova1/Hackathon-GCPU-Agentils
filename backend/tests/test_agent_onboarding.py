@@ -3,14 +3,19 @@ Test direct de l'agent onboarding pour diagnostiquer les problèmes
 """
 import logging
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Ajouter le dossier backend au path pour permettre les imports
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(name)s - %(message)s')
 
-# Charger le .env
-env_path = Path(__file__).parent.parent / ".env"
+# Charger le .env depuis la RACINE du projet (2 niveaux au-dessus de tests/)
+env_path = Path(__file__).parent.parent.parent / ".env"
 print(f"📁 Chargement du .env depuis: {env_path}")
 print(f"✅ Fichier existe: {env_path.exists()}\n")
 load_dotenv(dotenv_path=env_path, override=True)

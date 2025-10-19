@@ -1,7 +1,14 @@
 """
 Test rapide du mapping des slots vers le profil utilisateur
 """
-from app.api.onboarding import map_minimal_slots_to_full_profile
+import sys
+from pathlib import Path
+
+# Ajouter le dossier backend au path pour permettre les imports
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
+
+from app.api.routes.onboarding import map_minimal_slots_to_full_profile
 import json
 
 # Test 1: Slots obligatoires uniquement
