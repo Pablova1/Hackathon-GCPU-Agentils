@@ -1,7 +1,7 @@
 """
-Agent Orchestrateur - Combine les suggestions de nutrition et fitness.
+Agent Orchestrateur - Combine les suggestions de nutrition, fitness et médicales.
 
-Prend les sorties du MealSuggestionAgent et du CoachAgent,
+Prend les sorties du MealSuggestionAgent, du CoachAgent et du MedicalAgent,
 puis génère une suggestion holistique unifiée via Google Gemini.
 """
 
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 class OrchestratorAgent:
     """
-    Agent orchestrateur qui combine les suggestions de nutrition et fitness
-    en une recommandation holistique cohérente.
+    Agent orchestrateur qui combine les suggestions de nutrition, fitness
+    et médicales en une recommandation holistique cohérente.
     """
     
     def __init__(
@@ -63,6 +63,7 @@ class OrchestratorAgent:
         self,
         meal_suggestion: Dict[str, Any],
         workout_suggestion: Dict[str, Any],
+        medical_context: Optional[Dict[str, Any]],
         user_context: Dict[str, Any]
     ) -> str:
         """
@@ -71,6 +72,7 @@ class OrchestratorAgent:
         Args:
             meal_suggestion: Résultat du MealSuggestionAgent
             workout_suggestion: Résultat du CoachAgent
+            medical_context: Résultat du MedicalAgent (optionnel)
             user_context: Contexte utilisateur (profil + objectifs)
             
         Returns:
@@ -78,11 +80,15 @@ class OrchestratorAgent:
         """
         meal_text = meal_suggestion.get("suggestion", "No meal suggestion available")
         workout_text = workout_suggestion.get("suggestion", "No workout suggestion available")
+        medical_text = ""
+        
+        if medical_context and medical_context.get("success", False):
+            medical_text = medical_context.get("medical_analysis", "")
         
         profile = user_context.get("profile", {})
         goals = user_context.get("goals", {})
         
-        prompt = f"""You are a holistic health and wellness coach who provides integrated lifestyle recommendations combining nutrition and fitness.
+        prompt = f"""You are a holistic health and wellness coach who provides integrated lifestyle recommendations combining nutrition, fitness, and medical considerations.
 
 USER PROFILE:
 - Age: {profile.get('age')} years old
@@ -94,6 +100,9 @@ USER GOALS:
 - Main Goal: {goals.get('mainGoal', 'General health')}
 - Target Weight: {goals.get('targetWeight', 'Not specified')} kg
 
+MEDICAL CONTEXT (from Medical Agent):
+{medical_text if medical_text else "No specific medical constraints"}
+
 NUTRITION SUGGESTION (from Meal Agent):
 {meal_text}
 
@@ -101,18 +110,19 @@ FITNESS SUGGESTION (from Coach Agent):
 {workout_text}
 
 TASK:
-Create EXACTLY ONE unified, holistic daily recommendation that combines both nutrition and fitness suggestions into a coherent action plan.
+Create EXACTLY ONE unified, holistic daily recommendation that combines nutrition, fitness, AND medical considerations into a coherent action plan.
 
 REQUIREMENTS:
-1. Integrate the meal and workout suggestions into one cohesive plan
+1. Integrate the meal, workout, and medical context into one cohesive plan
 2. Ensure timing makes sense (e.g., pre/post-workout nutrition if relevant)
-3. Highlight how the meal supports the workout and vice versa
-4. Keep it concise, motivating, and actionable
-5. One paragraph format (2-3 sentences max)
-6. Start with "Today's Plan:" or "Your Daily Focus:"
+3. Account for medical constraints (medications, allergies, injuries)
+4. Highlight how the meal supports the workout and respects medical needs
+5. Keep it concise, motivating, and actionable
+6. One paragraph format (2-3 sentences max)
+7. Start with "Today's Plan:" or "Your Daily Focus:"
 
 EXAMPLE OUTPUT:
-Today's Plan: Start with a high-protein Greek yogurt breakfast (350 kcal) to fuel your 45-minute upper body strength session at moderate intensity. Post-workout, focus on protein recovery with lean chicken and vegetables for lunch, staying within your calorie goals while supporting muscle growth and fat loss.
+Today's Plan: Given your blood pressure medication, focus on low-sodium grilled chicken with quinoa for lunch (350 kcal). Complete your 45-minute upper body strength session at moderate intensity, staying hydrated. Avoid intense cardio and prioritize potassium-rich foods like bananas post-workout.
 
 Now generate the unified suggestion:"""
         
@@ -122,23 +132,25 @@ Now generate the unified suggestion:"""
         self,
         meal_suggestion: Dict[str, Any],
         workout_suggestion: Dict[str, Any],
+        medical_context: Optional[Dict[str, Any]] = None,
         user_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Orchestre et combine les suggestions de nutrition et fitness.
+        Orchestre et combine les suggestions de nutrition, fitness et médicales.
         
         Args:
             meal_suggestion: Résultat du MealSuggestionAgent
             workout_suggestion: Résultat du CoachAgent
+            medical_context: Résultat du MedicalAgent (optionnel)
             user_context: Contexte utilisateur optionnel (profil + objectifs)
             
         Returns:
             Dict contenant la suggestion unifiée et les suggestions individuelles
         """
         try:
-            logger.info("Orchestrating meal and workout suggestions...")
+            logger.info("Orchestrating meal, workout, and medical suggestions...")
             
-            # Vérifier que les deux agents ont réussi
+            # Vérifier que les agents essentiels ont réussi
             if not meal_suggestion.get("success", False):
                 return {
                     "success": False,
@@ -153,6 +165,11 @@ Now generate the unified suggestion:"""
                     "generated_at": datetime.now().isoformat()
                 }
             
+            # Le contexte médical est optionnel - continuer même s'il a échoué
+            if medical_context and not medical_context.get("success", False):
+                logger.warning(f"Medical context unavailable: {medical_context.get('error')}")
+                medical_context = None
+            
             # Extraire le contexte utilisateur si disponible
             if user_context is None:
                 user_context = {
@@ -164,6 +181,7 @@ Now generate the unified suggestion:"""
             prompt = self.build_orchestration_prompt(
                 meal_suggestion,
                 workout_suggestion,
+                medical_context,
                 user_context
             )
             
@@ -175,7 +193,7 @@ Now generate the unified suggestion:"""
             
             logger.info("Unified suggestion generated successfully")
             
-            return {
+            result = {
                 "success": True,
                 "unified_suggestion": unified_text,
                 "individual_suggestions": {
@@ -191,6 +209,15 @@ Now generate the unified suggestion:"""
                 "user_context": user_context,
                 "generated_at": datetime.now().isoformat()
             }
+            
+            # Ajouter le contexte médical s'il est disponible
+            if medical_context:
+                result["individual_suggestions"]["medical"] = {
+                    "analysis": medical_context.get("medical_analysis"),
+                    "generated_at": medical_context.get("generated_at")
+                }
+            
+            return result
             
         except Exception as e:
             logger.error(f"Error orchestrating suggestions: {e}", exc_info=True)

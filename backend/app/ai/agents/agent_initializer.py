@@ -7,6 +7,7 @@ from app.ai.agents.agent_assiette_1.agent import NutrientAnalyzerAgent
 from app.ai.agents.agent_onboarding.agent import OnboardingAgent
 from app.ai.agents.agent_meal_suggestion.agent import MealSuggestionAgent
 from app.ai.agents.agent_coach.agent import CoachAgent
+from app.ai.agents.agent_medical.agent import MedicalAgent
 from app.ai.agents.agent_orchestrator.agent import OrchestratorAgent
 from app.db.mongo_client import db
 from fastapi import HTTPException
@@ -20,6 +21,7 @@ _nutrient_analyzer = None
 _onboarding_agent = None
 _meal_suggestion_agent = None
 _coach_agent = None
+_medical_agent = None
 _orchestrator_agent = None
 
 
@@ -130,3 +132,22 @@ def get_orchestrator_agent() -> OrchestratorAgent:
                 detail=f"Impossible d'initialiser l'agent orchestrateur: {str(e)}"
             )
     return _orchestrator_agent
+
+
+def get_medical_agent() -> MedicalAgent:
+    """Retrieve or create the singleton instance of MedicalAgent."""
+    global _medical_agent
+    if _medical_agent is None:
+        try:
+            _medical_agent = MedicalAgent(
+                mongo_db=db,
+                model_name=settings.GEMINI_MODEL
+            )
+            logger.info("MedicalAgent initialisé")
+        except Exception as e:
+            logger.error(f"Erreur initialisation MedicalAgent: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Impossible d'initialiser l'agent médical: {str(e)}"
+            )
+    return _medical_agent
