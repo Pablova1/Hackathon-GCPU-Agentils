@@ -5,6 +5,8 @@ from app.core.config import settings
 from app.ai.agents.agent_assiette_0.agent import FoodAnalyzerAgent
 from app.ai.agents.agent_assiette_1.agent import NutrientAnalyzerAgent
 from app.ai.agents.agent_onboarding.agent import OnboardingAgent
+from app.ai.agents.agent_meal_suggestion.agent import MealSuggestionAgent
+from app.db.mongo_client import db
 from fastapi import HTTPException
 import logging
 
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 _food_analyzer = None
 _nutrient_analyzer = None
 _onboarding_agent = None
+_meal_suggestion_agent = None
 
 
 def get_food_analyzer() -> FoodAnalyzerAgent:
@@ -67,3 +70,22 @@ def get_onboarding_agent() -> OnboardingAgent:
             )
     return _onboarding_agent
 
+
+def get_meal_suggestion_agent() -> MealSuggestionAgent:
+    """Retrieve or create the singleton instance of MealSuggestionAgent."""
+    global _meal_suggestion_agent
+    if _meal_suggestion_agent is None:
+        try:
+            # Utiliser directement l'instance db asynchrone
+            _meal_suggestion_agent = MealSuggestionAgent(
+                mongo_db=db,
+                model_name=settings.GEMINI_MODEL
+            )
+            logger.info("MealSuggestionAgent initialisé")
+        except Exception as e:
+            logger.error(f"Erreur initialisation MealSuggestionAgent: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Impossible d'initialiser l'agent de suggestion de repas: {str(e)}"
+            )
+    return _meal_suggestion_agent
