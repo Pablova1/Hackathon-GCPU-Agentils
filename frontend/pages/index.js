@@ -1,9 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 export default function Home() {
+  const router = useRouter();
   const [file, setFile] = useState(null);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
+  const [sessionToken, setSessionToken] = useState(null);
+  const [username, setUsername] = useState('');
+
+  // Vérifier l'authentification au chargement
+  useEffect(() => {
+    const token = localStorage.getItem('session_token');
+    const user = localStorage.getItem('username');
+    
+    if (!token) {
+      // Pas de session, rediriger vers la page d'authentification
+      router.push('/auth');
+    } else {
+      setSessionToken(token);
+      setUsername(user || 'Utilisateur');
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('username');
+    localStorage.removeItem('email');
+    router.push('/auth');
+  };
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -22,10 +48,18 @@ export default function Home() {
     try {
       const res = await fetch('http://localhost:8000/api/analyze/plate', {
         method: 'POST',
+        headers: {
+          'X-Session-Token': sessionToken  // Ajouter le token d'authentification
+        },
         body: formData,
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          // Session expirée, rediriger vers login
+          handleLogout();
+          return;
+        }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
@@ -65,11 +99,17 @@ export default function Home() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Session-Token': sessionToken  // Ajouter le token d'authentification
         },
         body: JSON.stringify(response.aliments), // Send the list of aliments directly
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          // Session expirée, rediriger vers login
+          handleLogout();
+          return;
+        }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
@@ -82,9 +122,29 @@ export default function Home() {
     }
   };
 
+  // Ne pas afficher la page si pas de session
+  if (!sessionToken) {
+    return <div style={{ padding: '20px' }}>Chargement...</div>;
+  }
+
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
-      <h1>Food Analyzer</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1>Food Analyzer</h1>
+        <div>
+          <span style={{ marginRight: '15px' }}>Bonjour, {username}!</span>
+          <button onClick={handleLogout} style={{ 
+            padding: '8px 16px',
+            background: '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}>
+            Déconnexion
+          </button>
+        </div>
+      </div>
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="file">Upload an image of your plate:</label>

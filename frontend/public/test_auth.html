@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Authentification - Nutrition App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            background: #f5f5f5;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-section {
+            display: none;
+        }
+        
+        .form-section.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        input.error {
+            border-color: #f44336;
+        }
+        
+        .error-message {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .success-message {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .error-alert {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error-alert.show {
+            display: block;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .user-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .user-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .user-info strong {
+            color: #667eea;
+        }
+        
+        .session-token {
+            background: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px dashed #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ Nutrition App</h1>
+            <p>Commencez votre parcours santé</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('login')">Connexion</button>
+            <button class="tab" onclick="switchTab('register')">Inscription</button>
+        </div>
+        
+        <div class="form-container">
+            <!-- Messages -->
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorAlert" class="error-alert"></div>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px;">Traitement en cours...</p>
+            </div>
+            
+            <!-- Formulaire de connexion -->
+            <div id="loginForm" class="form-section active">
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input 
+                            type="email" 
+                            id="loginEmail" 
+                            placeholder="votre.email@example.com" 
+                            required
+                        >
+                        <div class="error-message" id="loginEmailError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword">Mot de passe</label>
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            placeholder="Votre mot de passe" 
+                            required
+                        >
+                        <div class="error-message" id="loginPasswordError"></div>
+                    </div>
+                    
+                    <button type="submit">Se connecter</button>
+                </form>
+            </div>
+            
+            <!-- Formulaire d'inscription -->
+            <div id="registerForm" class="form-section">
+                <form onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="registerUsername">Nom d'utilisateur</label>
+                        <input 
+                            type="text" 
+                            id="registerUsername" 
+                            placeholder="Votre nom d'utilisateur" 
+                            minlength="3"
+                            maxlength="50"
+                            required
+                        >
+                        <div class="error-message" id="registerUsernameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input 
+                            type="email" 
+                            id="registerEmail" 
+                            placeholder="votre.email@example.com" 
+                            required
+                        >
+                        <div class="error-message" id="registerEmailError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPassword">Mot de passe</label>
+                        <input 
+                            type="password" 
+                            id="registerPassword" 
+                            placeholder="Minimum 6 caractères" 
+                            minlength="6"
+                            required
+                        >
+                        <div class="error-message" id="registerPasswordError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">Confirmer le mot de passe</label>
+                        <input 
+                            type="password" 
+                            id="registerPasswordConfirm" 
+                            placeholder="Répétez votre mot de passe" 
+                            required
+                        >
+                        <div class="error-message" id="registerPasswordConfirmError"></div>
+                    </div>
+                    
+                    <button type="submit">S'inscrire</button>
+                </form>
+            </div>
+            
+            <!-- Informations utilisateur (affiché après connexion) -->
+            <div id="userInfo" class="user-info" style="display: none;">
+                <h3 style="margin-bottom: 10px;">✅ Connecté !</h3>
+                <p><strong>User ID:</strong> <span id="userId"></span></p>
+                <p><strong>Nom:</strong> <span id="displayUsername"></span></p>
+                <p><strong>Email:</strong> <span id="displayEmail"></span></p>
+                <div class="session-token">
+                    <strong>Session Token:</strong><br>
+                    <span id="displayToken"></span>
+                </div>
+                <p style="margin-top: 15px; color: #666; font-size: 13px;">
+                    💡 Ce token est automatiquement sauvegardé dans le localStorage. 
+                    Vous pouvez maintenant utiliser l'application !
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Changement d'onglet
+        function switchTab(tab) {
+            // Mise à jour des tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Mise à jour des formulaires
+            document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+            document.getElementById(tab + 'Form').classList.add('active');
+            
+            // Reset messages
+            hideMessages();
+        }
+        
+        // Gestion de la connexion
+        async function handleLogin(event) {
+            event.preventDefault();
+            hideMessages();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Sauvegarder les informations dans localStorage
+                    localStorage.setItem('session_token', data.session_token);
+                    localStorage.setItem('user_id', data.user_id);
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('email', data.email);
+                    
+                    // Afficher les informations
+                    showSuccess(data.message);
+                    displayUserInfo(data);
+                } else {
+                    showError(data.detail || 'Erreur de connexion');
+                }
+            } catch (error) {
+                showError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Gestion de l'inscription
+        async function handleRegister(event) {
+            event.preventDefault();
+            hideMessages();
+            
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            
+            // Validation côté client
+            if (password !== passwordConfirm) {
+                showError('Les mots de passe ne correspondent pas');
+                document.getElementById('registerPasswordConfirmError').textContent = 'Les mots de passe ne correspondent pas';
+                document.getElementById('registerPasswordConfirmError').classList.add('show');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Sauvegarder les informations dans localStorage
+                    localStorage.setItem('session_token', data.session_token);
+                    localStorage.setItem('user_id', data.user_id);
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('email', data.email);
+                    
+                    // Afficher les informations
+                    showSuccess(data.message);
+                    displayUserInfo(data);
+                } else {
+                    showError(data.detail || 'Erreur lors de l\'inscription');
+                }
+            } catch (error) {
+                showError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Affichage des informations utilisateur
+        function displayUserInfo(data) {
+            document.getElementById('userId').textContent = data.user_id;
+            document.getElementById('displayUsername').textContent = data.username;
+            document.getElementById('displayEmail').textContent = data.email;
+            document.getElementById('displayToken').textContent = data.session_token;
+            document.getElementById('userInfo').style.display = 'block';
+            
+            // Masquer les formulaires
+            document.querySelectorAll('.form-section').forEach(f => f.style.display = 'none');
+        }
+        
+        // Fonctions utilitaires
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            el.classList.add('show');
+        }
+        
+        function showError(message) {
+            const el = document.getElementById('errorAlert');
+            el.textContent = message;
+            el.classList.add('show');
+        }
+        
+        function showLoading(show) {
+            const el = document.getElementById('loading');
+            if (show) {
+                el.classList.add('show');
+            } else {
+                el.classList.remove('show');
+            }
+        }
+        
+        function hideMessages() {
+            document.querySelectorAll('.success-message, .error-alert, .error-message').forEach(el => {
+                el.classList.remove('show');
+            });
+        }
+        
+        // Vérifier si déjà connecté au chargement
+        window.addEventListener('DOMContentLoaded', () => {
+            const sessionToken = localStorage.getItem('session_token');
+            const userId = localStorage.getItem('user_id');
+            const username = localStorage.getItem('username');
+            const email = localStorage.getItem('email');
+            
+            if (sessionToken && userId) {
+                displayUserInfo({
+                    session_token: sessionToken,
+                    user_id: userId,
+                    username: username,
+                    email: email
+                });
+                showSuccess('Session active - Vous êtes déjà connecté !');
+            }
+        });
+    </script>
+</body>
+</html>
