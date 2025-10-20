@@ -71,14 +71,31 @@ class Misc(BaseModel):
 # ─────────────────────────────────────────────────────────────
 
 class UserDocument(BaseModel):
+    """
+    Document utilisateur complet stocké dans MongoDB (collection 'user').
+    Contient à la fois les informations d'authentification et le profil nutritionnel.
+    """
     id: Optional[str] = Field(default=None, alias="_id")
-    profile: ProfileCore
-    medical: Medical
-    nutrition: Nutrition
-    goals: Goals
+    user_id: str  # Identifiant unique de l'utilisateur (ex: user_abc123)
+    
+    # Champs d'authentification
+    email: str  # Email unique pour la connexion
+    username: str  # Nom d'utilisateur unique
+    password_hash: str  # Hash SHA256 du mot de passe
+    
+    # Profil nutritionnel (optionnel jusqu'à l'onboarding)
+    profile: Optional[ProfileCore] = None
+    medical: Optional[Medical] = None
+    nutrition: Optional[Nutrition] = None
+    goals: Optional[Goals] = None
     religiousRestrictions: Optional[ReligiousRestrictions] = None
     misc: Optional[Misc] = None
-    createdAt: datetime
+    
+    # Métadonnées
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_login: Optional[datetime] = None
+    profile_completed: bool = False  # True après l'onboarding
+    createdAt: Optional[datetime] = None  # Rétrocompatibilité
 
     model_config = dict(
         populate_by_name=True,

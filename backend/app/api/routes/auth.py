@@ -68,7 +68,7 @@ async def register(request: RegisterRequest):
         ```
     """
     db = await get_database()
-    users = db["users"]
+    users = db["user"]  # Collection 'user' (singulier) - homogène avec le reste de l'app
     
     # Vérifier si l'email existe déjà
     existing_user = await users.find_one({"email": request.email.lower()})
@@ -95,7 +95,14 @@ async def register(request: RegisterRequest):
         "password_hash": hash_password(request.password),
         "created_at": datetime.now(),
         "last_login": datetime.now(),
-        "profile_completed": False
+        "profile_completed": False,
+        # Les champs de profil seront ajoutés lors de l'onboarding
+        "profile": None,
+        "medical": None,
+        "nutrition": None,
+        "goals": None,
+        "religiousRestrictions": None,
+        "misc": None
     }
     
     await users.insert_one(user_data)
@@ -134,7 +141,7 @@ async def login(request: LoginRequest):
         ```
     """
     db = await get_database()
-    users = db["users"]
+    users = db["user"]  # Collection 'user' (singulier) - homogène avec le reste de l'app
     
     # Chercher l'utilisateur
     user = await users.find_one({"email": request.email.lower()})
@@ -183,7 +190,7 @@ async def check_email(email: str):
         {"available": true/false}
     """
     db = await get_database()
-    users = db["users"]
+    users = db["user"]  # Collection 'user' (singulier) - homogène avec le reste de l'app
     
     existing_user = await users.find_one({"email": email.lower()})
     
@@ -204,7 +211,7 @@ async def check_username(username: str):
         {"available": true/false}
     """
     db = await get_database()
-    users = db["users"]
+    users = db["user"]  # Collection 'user' (singulier) - homogène avec le reste de l'app
     
     existing_user = await users.find_one({"username": username})
     

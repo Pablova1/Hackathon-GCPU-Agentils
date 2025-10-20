@@ -6,7 +6,9 @@ Le système d'authentification permet aux utilisateurs de créer un compte et de
 
 ## Architecture
 
-### Collection MongoDB: `users`
+### Collection MongoDB: `user`
+
+**⚠️ Important** : La collection s'appelle **`user`** (singulier), pas `users`.
 
 ```json
 {
@@ -17,9 +19,16 @@ Le système d'authentification permet aux utilisateurs de créer un compte et de
   "password_hash": "sha256_hash_here",
   "created_at": ISODate("2025-10-20T10:00:00"),
   "last_login": ISODate("2025-10-20T15:30:00"),
-  "profile_completed": false
+  "profile_completed": false,
+  "profile": null,
+  "medical": null,
+  "nutrition": null,
+  "goals": null
 }
 ```
+
+> **Note** : Les champs `profile`, `medical`, etc. sont ajoutés lors de l'onboarding.  
+> Voir [docs/USER_SCHEMA.md](docs/USER_SCHEMA.md) pour le schéma complet.
 
 ## Routes API
 
