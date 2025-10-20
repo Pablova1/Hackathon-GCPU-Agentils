@@ -48,8 +48,10 @@ class Goals(BaseModel):
     maintainShape: bool = False
 
 class ProfileCore(BaseModel):
-    lastName: str
+    """Informations de profil de base de l'utilisateur."""
     firstName: str
+    lastName: str
+    email: str  # Email de l'utilisateur (unique)
     age: int = Field(ge=0, le=130)
     gender: Gender
     weight: float = Field(ge=0)
@@ -74,17 +76,28 @@ class UserDocument(BaseModel):
     """
     Document utilisateur complet stocké dans MongoDB (collection 'user').
     Contient à la fois les informations d'authentification et le profil nutritionnel.
+    
+    Structure:
+    - user_id: Identifiant unique système
+    - password_hash: Authentification
+    - profile: Contient firstName, lastName, email, age, gender, weight, height, bodyType
+    - medical: Allergies, traitements, historique médical
+    - nutrition: Régime alimentaire, intolérances, préférences
+    - goals: Objectifs (perte de poids, gain musculaire, etc.)
+    - religiousRestrictions: Restrictions religieuses
+    - misc: Niveau d'activité, sports, occupation, notes
+    - created_at, profile_completed: Métadonnées
     """
     id: Optional[str] = Field(default=None, alias="_id")
     user_id: str  # Identifiant unique de l'utilisateur (ex: user_abc123)
     
-    # Champs d'authentification
-    email: str  # Email unique pour la connexion
-    username: str  # Nom d'utilisateur unique
+    # Authentification
     password_hash: str  # Hash SHA256 du mot de passe
     
-    # Profil nutritionnel (optionnel jusqu'à l'onboarding)
+    # Profil (contient maintenant l'email)
     profile: Optional[ProfileCore] = None
+    
+    # Santé et nutrition
     medical: Optional[Medical] = None
     nutrition: Optional[Nutrition] = None
     goals: Optional[Goals] = None
