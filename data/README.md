@@ -1,0 +1,1 @@
+Permet de stocker les images pour le test
