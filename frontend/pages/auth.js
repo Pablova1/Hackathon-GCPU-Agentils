@@ -17,7 +17,8 @@ export default function Auth() {
   
   // Formulaire d'inscription
   const [registerData, setRegisterData] = useState({
-    username: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     passwordConfirm: ''
@@ -56,7 +57,8 @@ export default function Auth() {
         // Sauvegarder dans localStorage
         localStorage.setItem('session_token', data.session_token);
         localStorage.setItem('user_id', data.user_id);
-        localStorage.setItem('username', data.username);
+        localStorage.setItem('first_name', data.first_name);
+        localStorage.setItem('last_name', data.last_name);
         localStorage.setItem('email', data.email);
 
         setSuccess('Connexion réussie ! Redirection...');
@@ -66,7 +68,17 @@ export default function Auth() {
           router.push('/');
         }, 1000);
       } else {
-        setError(data.detail || 'Erreur de connexion');
+        // Gérer les erreurs de validation (422) et les erreurs métier (400)
+        if (Array.isArray(data.detail)) {
+          // Erreur de validation Pydantic (422)
+          const errorMessages = data.detail.map(err => err.msg).join(', ');
+          setError(errorMessages);
+        } else if (typeof data.detail === 'string') {
+          // Erreur métier (400)
+          setError(data.detail);
+        } else {
+          setError('Erreur de connexion');
+        }
       }
     } catch (err) {
       setError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
@@ -100,7 +112,8 @@ export default function Auth() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: registerData.username,
+          first_name: registerData.first_name,
+          last_name: registerData.last_name,
           email: registerData.email,
           password: registerData.password
         })
@@ -112,7 +125,8 @@ export default function Auth() {
         // Sauvegarder dans localStorage
         localStorage.setItem('session_token', data.session_token);
         localStorage.setItem('user_id', data.user_id);
-        localStorage.setItem('username', data.username);
+        localStorage.setItem('first_name', data.first_name);
+        localStorage.setItem('last_name', data.last_name);
         localStorage.setItem('email', data.email);
 
         setSuccess('Inscription réussie ! Redirection...');
@@ -122,7 +136,17 @@ export default function Auth() {
           router.push('/');
         }, 1000);
       } else {
-        setError(data.detail || 'Erreur lors de l\'inscription');
+        // Gérer les erreurs de validation (422) et les erreurs métier (400)
+        if (Array.isArray(data.detail)) {
+          // Erreur de validation Pydantic (422)
+          const errorMessages = data.detail.map(err => err.msg).join(', ');
+          setError(errorMessages);
+        } else if (typeof data.detail === 'string') {
+          // Erreur métier (400)
+          setError(data.detail);
+        } else {
+          setError('Erreur lors de l\'inscription');
+        }
       }
     } catch (err) {
       setError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
@@ -212,15 +236,29 @@ export default function Auth() {
           {activeTab === 'register' && !loading && (
             <form onSubmit={handleRegister} className={styles.form}>
               <div className={styles.formGroup}>
-                <label htmlFor="registerUsername">Nom d'utilisateur</label>
+                <label htmlFor="registerFirstName">Prénom</label>
                 <input
                   type="text"
-                  id="registerUsername"
-                  placeholder="Votre nom d'utilisateur"
-                  minLength="3"
+                  id="registerFirstName"
+                  placeholder="Votre prénom"
+                  minLength="1"
                   maxLength="50"
-                  value={registerData.username}
-                  onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
+                  value={registerData.first_name}
+                  onChange={(e) => setRegisterData({ ...registerData, first_name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="registerLastName">Nom</label>
+                <input
+                  type="text"
+                  id="registerLastName"
+                  placeholder="Votre nom de famille"
+                  minLength="1"
+                  maxLength="50"
+                  value={registerData.last_name}
+                  onChange={(e) => setRegisterData({ ...registerData, last_name: e.target.value })}
                   required
                 />
               </div>

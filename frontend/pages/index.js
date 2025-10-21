@@ -7,26 +7,30 @@ export default function Home() {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
   const [sessionToken, setSessionToken] = useState(null);
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const token = localStorage.getItem('session_token');
-    const user = localStorage.getItem('username');
+    const first = localStorage.getItem('first_name');
+    const last = localStorage.getItem('last_name');
     
     if (!token) {
       // Pas de session, rediriger vers la page d'authentification
       router.push('/auth');
     } else {
       setSessionToken(token);
-      setUsername(user || 'Utilisateur');
+      setFirstName(first || '');
+      setLastName(last || 'Utilisateur');
     }
   }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('session_token');
     localStorage.removeItem('user_id');
-    localStorage.removeItem('username');
+    localStorage.removeItem('first_name');
+    localStorage.removeItem('last_name');
     localStorage.removeItem('email');
     router.push('/auth');
   };
@@ -132,7 +136,7 @@ export default function Home() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Food Analyzer</h1>
         <div>
-          <span style={{ marginRight: '15px' }}>Bonjour, {username}!</span>
+          <span style={{ marginRight: '15px' }}>Bonjour, {firstName} {lastName}!</span>
           <button onClick={handleLogout} style={{ 
             padding: '8px 16px',
             background: '#f44336',

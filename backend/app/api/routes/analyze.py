@@ -106,12 +106,6 @@ async def analyze_plate(
         
         await analyses_collection.insert_one(analysis_record)
         
-        # Mise à jour des statistiques de session
-        await SessionManager.update_session_metadata(
-            session_token,
-            {"metadata.total_analyses": 1}
-        )
-        
         response = {
             "success": True,
             "aliments": aliments,

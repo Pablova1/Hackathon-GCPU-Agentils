@@ -26,9 +26,11 @@ class SessionResponse(BaseModel):
 @router.post("/create", response_model=SessionResponse)
 async def create_session(request: CreateSessionRequest):
     """
-    Crée une nouvelle session utilisateur.
+    Crée une nouvelle session pour un utilisateur existant.
+    NOTE: Les sessions sont normalement créées automatiquement lors du login/register.
+    Cette route est conservée pour compatibilité mais nécessite un user_id valide.
     
-    - **user_id**: (Optionnel) ID utilisateur. Si non fourni, un ID sera généré automatiquement.
+    - **user_id**: (Obligatoire) ID d'un utilisateur existant
     
     Returns:
         SessionResponse avec le token de session et l'user_id
@@ -37,17 +39,23 @@ async def create_session(request: CreateSessionRequest):
         ```
         POST /api/session/create
         {
-            "user_id": "mon_utilisateur_123"  // optionnel
+            "user_id": "user_abc123"
         }
         
         Response:
         {
             "session_token": "abc-def-123-456",
-            "user_id": "mon_utilisateur_123",
+            "user_id": "user_abc123",
             "message": "Session créée avec succès"
         }
         ```
     """
+    if not request.user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="user_id est obligatoire. Utilisez /api/auth/register pour créer un nouvel utilisateur."
+        )
+    
     session = await SessionManager.create_user_session(request.user_id)
     
     return SessionResponse(
@@ -89,9 +97,9 @@ async def get_session_info(session: dict = Depends(get_current_session)):
     return {
         "session_token": session["session_token"],
         "user_id": session["user_id"],
-        "created_at": session["created_at"],
-        "last_activity": session["last_activity"],
-        "metadata": session.get("metadata", {})
+        "created_at": session.get("created_at"),
+        "expires_at": session.get("expires_at"),
+        "last_activity": session.get("last_activity")
     }
 
 

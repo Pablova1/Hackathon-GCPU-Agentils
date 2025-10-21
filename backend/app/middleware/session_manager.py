@@ -1,6 +1,6 @@
 """
 Middleware de gestion des sessions utilisateur.
-Permet de tracker les utilisateurs à travers leurs actions (onboarding, analyses, etc.).
+Sessions stockées directement dans la collection 'user' (simplifié pour Hackathon).
 """
 
 from fastapi import Request, HTTPException, Depends, Header
@@ -18,42 +18,54 @@ SESSION_DURATION = timedelta(hours=24)
 
 
 class SessionManager:
-    """Gestionnaire de sessions utilisateur."""
+    """Gestionnaire de sessions utilisateur (stockées dans collection 'user')."""
     
     @staticmethod
-    async def create_user_session(user_id: Optional[str] = None) -> dict:
+    async def create_user_session(user_id: str) -> dict:
         """
-        Crée une nouvelle session utilisateur.
+        Crée ou renouvelle une session pour un utilisateur.
+        Met à jour directement le document user avec le nouveau token.
         
         Args:
-            user_id: ID utilisateur optionnel (sinon généré automatiquement)
+            user_id: ID utilisateur (obligatoire)
             
         Returns:
             dict: Session créée avec session_token, user_id, etc.
         """
         db = await get_database()
-        sessions = db["user_sessions"]
-        
-        # Génération d'un user_id si non fourni
-        if not user_id:
-            user_id = f"user_{uuid4().hex[:12]}"
+        users = db["user"]
         
         session_token = str(uuid4())
+        now = datetime.now()
+        expires_at = now + SESSION_DURATION
+        
+        # Mise à jour du document user avec le nouveau token
+        result = await users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "session_token": session_token,
+                    "session_created_at": now,
+                    "session_expires_at": expires_at,
+                    "last_activity": now,
+                    "last_login": now
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Utilisateur {user_id} non trouvé"
+            )
         
         session = {
             "session_token": session_token,
             "user_id": user_id,
-            "created_at": datetime.now(),
-            "last_activity": datetime.now(),
-            "expires_at": datetime.now() + SESSION_DURATION,
-            "metadata": {
-                "onboarding_completed": False,
-                "total_analyses": 0
-            }
+            "created_at": now,
+            "last_activity": now,
+            "expires_at": expires_at
         }
-        
-        # Insertion dans MongoDB
-        await sessions.insert_one(session)
         
         logger.info(f"✅ Session créée: {session_token} pour user {user_id}")
         return session
@@ -68,71 +80,64 @@ class SessionManager:
             session_token: Token de session
             
         Returns:
-            dict: Session si valide
+            dict: Session avec user_id, created_at, expires_at, last_activity
             
         Raises:
             HTTPException: Si session invalide ou expirée
         """
         db = await get_database()
-        sessions = db["user_sessions"]
+        users = db["user"]
         
-        session = await sessions.find_one({"session_token": session_token})
+        # Récupérer l'utilisateur par son token de session
+        user = await users.find_one({"session_token": session_token})
         
-        if not session:
+        if not user:
             raise HTTPException(
                 status_code=401,
-                detail="Session invalide. Veuillez créer une nouvelle session."
+                detail="Session invalide. Veuillez vous reconnecter."
             )
         
         # Vérification de l'expiration
-        if session["expires_at"] < datetime.now():
+        session_expires_at = user.get("session_expires_at")
+        if not session_expires_at or session_expires_at < datetime.now():
             raise HTTPException(
                 status_code=401,
                 detail="Session expirée. Veuillez vous reconnecter."
             )
         
         # Mise à jour de la dernière activité
-        await sessions.update_one(
+        await users.update_one(
             {"session_token": session_token},
-            {
-                "$set": {"last_activity": datetime.now()},
-                "$inc": {"metadata.total_requests": 1}
-            }
+            {"$set": {"last_activity": datetime.now()}}
         )
         
-        return session
+        # Retourner les informations de session
+        return {
+            "session_token": session_token,
+            "user_id": user["user_id"],
+            "created_at": user.get("session_created_at"),
+            "expires_at": session_expires_at,
+            "last_activity": datetime.now()
+        }
     
     
     @staticmethod
-    async def update_session_metadata(session_token: str, updates: dict):
+    async def mark_onboarding_complete(user_id: str):
         """
-        Met à jour les métadonnées d'une session.
+        Marque l'onboarding comme terminé pour un utilisateur.
         
         Args:
-            session_token: Token de session
-            updates: Dictionnaire de mises à jour (ex: {"metadata.total_analyses": 1})
+            user_id: ID utilisateur
         """
         db = await get_database()
-        sessions = db["user_sessions"]
+        users = db["user"]
         
-        await sessions.update_one(
-            {"session_token": session_token},
-            {"$inc": updates}
-        )
-    
-    
-    @staticmethod
-    async def mark_onboarding_complete(session_token: str):
-        """Marque l'onboarding comme terminé pour une session."""
-        db = await get_database()
-        sessions = db["user_sessions"]
-        
-        await sessions.update_one(
-            {"session_token": session_token},
-            {"$set": {"metadata.onboarding_completed": True}}
+        await users.update_one(
+            {"user_id": user_id},
+            {"$set": {"profile_completed": True}}
         )
         
-        logger.info(f"✅ Onboarding marqué comme complété pour session {session_token}")
+        logger.info(f"✅ Onboarding marqué comme complété pour user {user_id}")
     
     
     @staticmethod
@@ -144,27 +149,52 @@ class SessionManager:
             user_id: ID utilisateur
             
         Returns:
-            dict: Statistiques (nombre d'analyses, sessions, etc.)
+            dict: Statistiques (nombre d'analyses, onboarding, etc.)
         """
         db = await get_database()
-        sessions = db["user_sessions"]
+        users = db["user"]
         analyses = db["plate_analyses"]
         
-        # Récupérer toutes les sessions de l'utilisateur
-        user_sessions = await sessions.find({"user_id": user_id}).to_list(None)
+        # Récupérer l'utilisateur
+        user = await users.find_one({"user_id": user_id})
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
         
         # Compter les analyses
         total_analyses = await analyses.count_documents({"user_id": user_id})
         
         return {
             "user_id": user_id,
-            "total_sessions": len(user_sessions),
             "total_analyses": total_analyses,
-            "onboarding_completed": any(
-                s.get("metadata", {}).get("onboarding_completed", False) 
-                for s in user_sessions
-            )
+            "onboarding_completed": user.get("profile_completed", False),
+            "has_active_session": user.get("session_token") is not None
         }
+    
+    
+    @staticmethod
+    async def revoke_session(user_id: str):
+        """
+        Révoque la session d'un utilisateur (déconnexion).
+        
+        Args:
+            user_id: ID utilisateur
+        """
+        db = await get_database()
+        users = db["user"]
+        
+        await users.update_one(
+            {"user_id": user_id},
+            {
+                "$unset": {
+                    "session_token": "",
+                    "session_created_at": "",
+                    "session_expires_at": ""
+                }
+            }
+        )
+        
+        logger.info(f"✅ Session révoquée pour user {user_id}")
 
 
 # Dependency pour extraire la session depuis les headers

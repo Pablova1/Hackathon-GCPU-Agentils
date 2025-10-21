@@ -109,6 +109,12 @@ class UserDocument(BaseModel):
     last_login: Optional[datetime] = None
     profile_completed: bool = False  # True après l'onboarding
     createdAt: Optional[datetime] = None  # Rétrocompatibilité
+    
+    # Session (remplace la collection user_sessions)
+    session_token: Optional[str] = None  # Token de session actif
+    session_created_at: Optional[datetime] = None  # Date de création de la session
+    session_expires_at: Optional[datetime] = None  # Date d'expiration de la session
+    last_activity: Optional[datetime] = None  # Dernière activité de l'utilisateur
 
     model_config = dict(
         populate_by_name=True,

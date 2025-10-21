@@ -11,7 +11,7 @@ NOUVEAU SCHÉMA:
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import secrets
 
@@ -37,8 +37,8 @@ class LoginRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     """Réponse d'authentification."""
-    success: bool
-    message: str
+    success: bool = True
+    message: Optional[str] = None
     session_token: Optional[str] = None
     user_id: Optional[str] = None
     email: Optional[str] = None
@@ -86,15 +86,23 @@ async def register(request: RegisterRequest):
             detail="Un compte avec cet email existe déjà"
         )
     
-    # Créer l'utilisateur
+    # Créer l'utilisateur avec un token de session initial
     user_id = f"user_{secrets.token_hex(8)}"
+    session_token = str(secrets.token_urlsafe(32))
+    now = datetime.now()
     
     user_data = {
         "user_id": user_id,
         "password_hash": hash_password(request.password, user_id),
-        "created_at": datetime.now(),
-        "last_login": datetime.now(),
+        "created_at": now,
+        "last_login": now,
         "profile_completed": False,
+        
+        # Session intégrée dans le document user
+        "session_token": session_token,
+        "session_created_at": now,
+        "session_expires_at": now + timedelta(hours=24),
+        "last_activity": now,
         
         # Profil de base avec email, prénom, nom
         "profile": {
@@ -118,10 +126,6 @@ async def register(request: RegisterRequest):
     }
     
     result = await users.insert_one(user_data)
-    
-    # Créer une session pour l'utilisateur
-    session_manager = SessionManager()
-    session_token = await session_manager.create_user_session(user_id)
     
     return AuthResponse(
         success=True,
@@ -181,15 +185,9 @@ async def login(request: LoginRequest):
             detail="Email ou mot de passe incorrect"
         )
     
-    # Mettre à jour la dernière connexion
-    await users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"last_login": datetime.now()}}
-    )
-    
-    # Créer une session
+    # Créer une nouvelle session
     session_manager = SessionManager()
-    session_token = await session_manager.create_user_session(user_id)
+    session_data = await session_manager.create_user_session(user_id)
     
     # Récupérer les informations du profil
     profile = user.get("profile", {})
@@ -200,7 +198,7 @@ async def login(request: LoginRequest):
     return AuthResponse(
         success=True,
         message="Connexion réussie",
-        session_token=session_token,
+        session_token=session_data["session_token"],
         user_id=user_id,
         email=email,
         first_name=first_name,
@@ -228,10 +226,28 @@ async def check_email(email: str):
 
 
 @router.post("/logout")
-async def logout():
+async def logout(session_token: str):
     """
-    Déconnexion (côté client supprime le session_token).
+    Déconnexion - Révoque la session côté serveur.
+    
+    Args:
+        session_token: Token de session à révoquer
     """
+    db = await get_database()
+    users = db["user"]
+    
+    # Supprimer le token de session de l'utilisateur
+    await users.update_one(
+        {"session_token": session_token},
+        {
+            "$unset": {
+                "session_token": "",
+                "session_created_at": "",
+                "session_expires_at": ""
+            }
+        }
+    )
+    
     return {
         "success": True,
         "message": "Déconnexion réussie"
