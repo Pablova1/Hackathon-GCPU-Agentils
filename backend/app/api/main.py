@@ -9,6 +9,7 @@ import logging
 
 from app.core.config import settings
 from app.api.routes import api_router
+from app.api.meal_router import router as meal_router
 
 # Configuration du logging
 logging.basicConfig(
@@ -35,8 +36,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclusion de toutes les routes avec préfixe /api
+# Inclusion des routes
 app.include_router(api_router, prefix="/api")
+app.include_router(meal_router)  # Meals routes
 
 
 # Routes principales
