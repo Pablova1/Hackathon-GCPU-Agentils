@@ -207,10 +207,42 @@ async def analyze_nutrients(
         await nutrient_analyses.insert_one(nutrient_record)
         logger.info(f"✅ Analyse nutritionnelle sauvegardée pour user {user_id}")
 
+        # 🔥 JONCTION : Créer un repas dans la collection meals pour le scoring hebdomadaire
+        from app.db.meal_store import create_meal
+        from app.models.meal_model import MealCreate, Nutrients
+        
+        # Extraire les ingrédients depuis aliments_data
+        ingredients = [aliment["name"] for aliment in aliments_data]
+        
+        # Créer l'objet Nutrients depuis le nutrient_summary
+        # nutrient_summary a la structure: {"nutritional_values": {...}, "micronutrients": {...}}
+        nutritional_values = nutrient_summary.get("nutritional_values", {})
+        
+        meal_nutrients = Nutrients(
+            calories=nutritional_values.get("energy_kcal", 0),
+            protein=nutritional_values.get("proteins_g", 0),
+            fat=nutritional_values.get("lipids_g", 0),
+            carbohydrates=nutritional_values.get("carbohydrates_g", 0),
+            fiber=nutritional_values.get("fiber_g", 0)
+        )
+        
+        # Créer le repas
+        meal_create = MealCreate(
+            userId=user_id,
+            name=f"Repas du {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            ingredients=ingredients,
+            nutrients=meal_nutrients
+        )
+        
+        created_meal = await create_meal(meal_create)
+        logger.info(f"🍽️ Repas créé dans la collection meals avec ID: {created_meal['_id']}")
+
         return {
             "success": True,
             "nutrients": result,
-            "message": "Analyse des nutriments réussie."
+            "nutrient_summary": nutrient_summary,
+            "meal_id": str(created_meal['_id']),
+            "message": "Analyse des nutriments réussie et repas enregistré."
         }
 
     except ValueError as e:

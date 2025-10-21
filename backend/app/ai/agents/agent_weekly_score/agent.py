@@ -242,13 +242,24 @@ Ne retourne RIEN d'autre que ce JSON, pas de texte avant ou après."""
             # Nettoyer le texte (enlever les balises markdown si présentes)
             text = response_text.strip()
             
+            # Enlever les blocs de code markdown
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
             elif "```" in text:
                 text = text.split("```")[1].split("```")[0].strip()
             
+            # Extraire le JSON même s'il y a du texte avant/après
+            # Chercher le premier { et le dernier }
+            start_idx = text.find('{')
+            end_idx = text.rfind('}')
+            
+            if start_idx == -1 or end_idx == -1:
+                raise ValueError(f"Pas de JSON trouvé dans: {text}")
+            
+            json_text = text[start_idx:end_idx+1]
+            
             # Parser le JSON
-            result = json.loads(text)
+            result = json.loads(json_text)
             
             # Valider le score
             score = result.get("score")
