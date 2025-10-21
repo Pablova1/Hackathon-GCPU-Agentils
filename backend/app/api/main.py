@@ -9,7 +9,7 @@ import logging
 
 from app.core.config import settings
 from app.api.routes import api_router
-from app.api.meal_router import router as meal_router
+from app.api.routes.meal_router import router as meal_router
 
 # Configuration du logging
 logging.basicConfig(
