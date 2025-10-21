@@ -286,10 +286,11 @@ async def get_user_weekly_score(user_id: str):
     - **meals_count**: nombre de repas analysés dans la semaine
     """
     try:
-        from app.ai.homepage_ai import calculate_weekly_score
+        from app.ai.agents.agent_initializer import get_weekly_score_agent
         
         weekly_meals = await get_weekly_meals(user_id)
-        weekly_score = calculate_weekly_score(weekly_meals)
+        agent = get_weekly_score_agent()
+        weekly_score = agent.calculate_score(weekly_meals)
         
         if weekly_score is None:
             raise HTTPException(status_code=500, detail="Erreur lors du calcul de la note")

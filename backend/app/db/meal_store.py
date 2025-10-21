@@ -267,7 +267,7 @@ async def get_home_stats(user_id: str) -> dict:
         - current_month_calendar: calendrier du mois en cours
         - weekly_score: note hebdomadaire calculée par l'IA (1-5) avec commentaire
     """
-    from app.ai.homepage_ai import calculate_weekly_score
+    from app.ai.agents.agent_initializer import get_weekly_score_agent
     
     # Nombre total de plats scannés
     total_meals = await count_user_meals(user_id)
@@ -276,9 +276,10 @@ async def get_home_stats(user_id: str) -> dict:
     now = datetime.utcnow()
     monthly_calendar = await get_monthly_calendar(user_id, now.year, now.month)
     
-    # Récupérer les plats de la semaine et calculer la note
+    # Récupérer les plats de la semaine et calculer la note avec l'agent
     weekly_meals = await get_weekly_meals(user_id)
-    weekly_score = calculate_weekly_score(weekly_meals)
+    agent = get_weekly_score_agent()
+    weekly_score = agent.calculate_score(weekly_meals)
     
     return {
         "total_meals_scanned": total_meals,
