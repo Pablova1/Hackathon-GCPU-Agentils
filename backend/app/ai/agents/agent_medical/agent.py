@@ -48,7 +48,7 @@ class MedicalAgent:
             load_env: Si True, charge les variables d'environnement
         """
         self.db = mongo_db
-        self.users_collection = mongo_db.users
+        self.users_collection = mongo_db.user  # Collection 'user' au singulier
         
         # Charger la clé API
         if load_env:

@@ -106,12 +106,26 @@ class MealSuggestionAgent:
         start_date_str = start_date.isoformat()
         
         # Récupérer les repas récents (async)
+        # Convertir ObjectId en string pour la comparaison avec userId dans meals
         user_id_string = str(user["_id"])
+        
+        logger.info(f"Searching meals for user_id_string: {user_id_string}")
+        
+        # Chercher avec userId (string) - format standard dans la collection meals
         recent_meals_cursor = self.meals_collection.find({
             "userId": user_id_string,
             "dateScanned": {"$gte": start_date_str}
         }).sort("dateScanned", -1)
         recent_meals = await recent_meals_cursor.to_list(length=None)
+        
+        # Si aucun meal trouvé, essayer aussi avec user_id (snake_case) au cas où
+        if not recent_meals:
+            logger.info(f"No meals found with 'userId', trying 'user_id'...")
+            recent_meals_cursor = self.meals_collection.find({
+                "user_id": user_id_string,
+                "dateScanned": {"$gte": start_date_str}
+            }).sort("dateScanned", -1)
+            recent_meals = await recent_meals_cursor.to_list(length=None)
         
         logger.info(f"Retrieved {len(recent_meals)} meals for user {user_id_string}")
         
