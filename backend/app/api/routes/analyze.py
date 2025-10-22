@@ -2,20 +2,23 @@
 Routes pour l'analyse d'assiettes.
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import shutil
 from pathlib import Path
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi.encoders import jsonable_encoder
 
 from app.core.config import settings
 # Modifie cette ligne pour importer les deux fonctions
 from app.ai.agents.agent_initializer import get_food_analyzer, get_nutrient_analyzer
+from app.middleware.session_manager import get_current_session, get_optional_session, SessionManager
+from app.db.mongo_client import get_database
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +39,23 @@ class AnalyseResponse(BaseModel):
 
 
 @router.post("/plate", response_model=AnalyseResponse)
-async def analyze_plate(file: UploadFile = File(...)):
+async def analyze_plate(
+    file: UploadFile = File(...),
+    session: dict = Depends(get_current_session)
+):
     """
     Analyse une image d'assiette et retourne les aliments détectés.
     
+    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
+    
     - **file**: Image de l'assiette (JPG, PNG, JPEG, WEBP)
+    
+    Headers:
+        - X-Session-Token: Token de session valide
     """
+    
+    user_id = session["user_id"]
+    session_token = session["session_token"]
     
     # Vérification du type de fichier
     allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -65,7 +79,7 @@ async def analyze_plate(file: UploadFile = File(...)):
         with temp_file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        logger.info(f"Image sauvegardée: {temp_file_path}")
+        logger.info(f"Image sauvegardée: {temp_file_path} pour user {user_id}")
         
         # Analyse de l'image
         result = analyzer.analyze_plate(str(temp_file_path))
@@ -77,6 +91,21 @@ async def analyze_plate(file: UploadFile = File(...)):
         for aliment in aliments:
             aliment["estimated_quantity"] = int(aliment["estimated_quantity"])
 
+        # 🆕 SAUVEGARDE de l'analyse dans MongoDB
+        db = await get_database()
+        analyses_collection = db["plate_analyses"]
+        
+        analysis_record = {
+            "user_id": user_id,
+            "session_token": session_token,
+            "image_filename": unique_filename,
+            "aliments": aliments,
+            "nombre_aliments": len(aliments),
+            "analyzed_at": datetime.now().isoformat()
+        }
+        
+        await analyses_collection.insert_one(analysis_record)
+        
         response = {
             "success": True,
             "aliments": aliments,
@@ -84,7 +113,7 @@ async def analyze_plate(file: UploadFile = File(...)):
             "message": f"{len(aliments)} aliment(s) détecté(s)"
         }
         
-        logger.info(f"Analyse réussie: {response['nombre_aliments']} aliments")
+        logger.info(f"✅ Analyse réussie pour user {user_id}: {response['nombre_aliments']} aliments")
         
         return response
     
@@ -115,15 +144,26 @@ async def analyze_plate(file: UploadFile = File(...)):
 
 
 @router.post("/nutrients")
-async def analyze_nutrients(aliments: List[Aliment]):
+async def analyze_nutrients(
+    aliments: List[Aliment],
+    session: dict = Depends(get_current_session)
+):
     """
     Analyse les nutriments pour une liste d'aliments.
+    
+    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
 
     - **aliments**: Liste des aliments avec leur nom et quantité estimée.
+    
+    Headers:
+        - X-Session-Token: Token de session valide
     """
     try:
+        user_id = session["user_id"]
+        session_token = session["session_token"]
+        
         # Log the raw aliments for debugging
-        logger.info(f"Raw aliments received: {jsonable_encoder(aliments)}")
+        logger.info(f"Raw aliments received from user {user_id}: {jsonable_encoder(aliments)}")
 
         # Conversion des aliments en dictionnaire
         aliments_data = [
@@ -150,11 +190,59 @@ async def analyze_nutrients(aliments: List[Aliment]):
 
         # Log the nutrient summary
         logger.info(f"Nutrient summary: {nutrient_summary}")
+        
+        # 🆕 SAUVEGARDE de l'analyse nutritionnelle dans MongoDB
+        db = await get_database()
+        nutrient_analyses = db["nutrient_analyses"]
+        
+        nutrient_record = {
+            "user_id": user_id,
+            "session_token": session_token,
+            "aliments": aliments_data,
+            "nutrients": result,
+            "nutrient_summary": nutrient_summary,
+            "analyzed_at": datetime.now().isoformat()
+        }
+        
+        await nutrient_analyses.insert_one(nutrient_record)
+        logger.info(f"✅ Analyse nutritionnelle sauvegardée pour user {user_id}")
+
+        # 🔥 JONCTION : Créer un repas dans la collection meals pour le scoring hebdomadaire
+        from app.db.meal_store import create_meal
+        from app.models.meal_model import MealCreate, Nutrients
+        
+        # Extraire les ingrédients depuis aliments_data
+        ingredients = [aliment["name"] for aliment in aliments_data]
+        
+        # Créer l'objet Nutrients depuis le nutrient_summary
+        # nutrient_summary a la structure: {"nutritional_values": {...}, "micronutrients": {...}}
+        nutritional_values = nutrient_summary.get("nutritional_values", {})
+        
+        meal_nutrients = Nutrients(
+            calories=nutritional_values.get("energy_kcal", 0),
+            protein=nutritional_values.get("proteins_g", 0),
+            fat=nutritional_values.get("lipids_g", 0),
+            carbohydrates=nutritional_values.get("carbohydrates_g", 0),
+            fiber=nutritional_values.get("fiber_g", 0)
+        )
+        
+        # Créer le repas
+        meal_create = MealCreate(
+            userId=user_id,
+            name=f"Repas du {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            ingredients=ingredients,
+            nutrients=meal_nutrients
+        )
+        
+        created_meal = await create_meal(meal_create)
+        logger.info(f"🍽️ Repas créé dans la collection meals avec ID: {created_meal['_id']}")
 
         return {
             "success": True,
             "nutrients": result,
-            "message": "Analyse des nutriments réussie."
+            "nutrient_summary": nutrient_summary,
+            "meal_id": str(created_meal['_id']),
+            "message": "Analyse des nutriments réussie et repas enregistré."
         }
 
     except ValueError as e:
@@ -197,3 +285,88 @@ async def health_check():
             status_code=503,
             detail=f"Service indisponible: {str(e)}"
         )
+
+@router.get("/history")
+async def get_analysis_history(
+    session: dict = Depends(get_current_session),
+    limit: int = 10
+):
+    """
+    Récupère l'historique des analyses d'assiettes pour l'utilisateur courant.
+    
+    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
+    
+    - **limit**: Nombre maximum de résultats (par défaut: 10)
+    
+    Headers:
+        - X-Session-Token: Token de session valide
+        
+    Returns:
+        Liste des analyses précédentes de l'utilisateur
+    """
+    user_id = session["user_id"]
+    
+    db = await get_database()
+    analyses_collection = db["plate_analyses"]
+    
+    # Récupération des analyses de l'utilisateur
+    cursor = analyses_collection.find(
+        {"user_id": user_id}
+    ).sort("analyzed_at", -1).limit(limit)
+    
+    analyses = await cursor.to_list(length=limit)
+    
+    # Nettoyage des résultats (retirer _id de MongoDB)
+    for analysis in analyses:
+        analysis.pop("_id", None)
+    
+    logger.info(f"📊 Historique récupéré pour user {user_id}: {len(analyses)} analyses")
+    
+    return {
+        "user_id": user_id,
+        "total": len(analyses),
+        "analyses": analyses
+    }
+
+
+@router.get("/nutrients/history")
+async def get_nutrient_history(
+    session: dict = Depends(get_current_session),
+    limit: int = 10
+):
+    """
+    Récupère l'historique des analyses nutritionnelles pour l'utilisateur courant.
+    
+    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
+    
+    - **limit**: Nombre maximum de résultats (par défaut: 10)
+    
+    Headers:
+        - X-Session-Token: Token de session valide
+        
+    Returns:
+        Liste des analyses nutritionnelles précédentes de l'utilisateur
+    """
+    user_id = session["user_id"]
+    
+    db = await get_database()
+    nutrient_analyses = db["nutrient_analyses"]
+    
+    # Récupération des analyses de l'utilisateur
+    cursor = nutrient_analyses.find(
+        {"user_id": user_id}
+    ).sort("analyzed_at", -1).limit(limit)
+    
+    analyses = await cursor.to_list(length=limit)
+    
+    # Nettoyage des résultats
+    for analysis in analyses:
+        analysis.pop("_id", None)
+    
+    logger.info(f"🥗 Historique nutritionnel récupéré pour user {user_id}: {len(analyses)} analyses")
+    
+    return {
+        "user_id": user_id,
+        "total": len(analyses),
+        "analyses": analyses
+    }

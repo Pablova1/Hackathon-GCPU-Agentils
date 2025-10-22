@@ -267,7 +267,10 @@ async def get_home_stats(user_id: str) -> dict:
         - current_month_calendar: calendrier du mois en cours
         - weekly_score: note hebdomadaire calculée par l'IA (1-5) avec commentaire
     """
-    from app.ai.homepage_ai import calculate_weekly_score
+    import logging
+    from app.ai.agents.agent_initializer import get_weekly_score_agent
+    
+    logger = logging.getLogger(__name__)
     
     # Nombre total de plats scannés
     total_meals = await count_user_meals(user_id)
@@ -276,9 +279,26 @@ async def get_home_stats(user_id: str) -> dict:
     now = datetime.utcnow()
     monthly_calendar = await get_monthly_calendar(user_id, now.year, now.month)
     
-    # Récupérer les plats de la semaine et calculer la note
+    # Récupérer les plats de la semaine et calculer la note avec l'agent
     weekly_meals = await get_weekly_meals(user_id)
-    weekly_score = calculate_weekly_score(weekly_meals)
+    
+    try:
+        agent = get_weekly_score_agent()
+        weekly_score = agent.calculate_score(weekly_meals)
+        
+        # Si l'agent retourne None, utiliser un score par défaut
+        if weekly_score is None:
+            logger.warning(f"L'agent a retourné None pour user {user_id}, utilisation du score par défaut")
+            weekly_score = {
+                "score": 3.0,
+                "comment": "Impossible de calculer le score pour le moment. Réessaye plus tard !"
+            }
+    except Exception as e:
+        logger.error(f"Erreur lors du calcul du score hebdomadaire: {e}", exc_info=True)
+        weekly_score = {
+            "score": 3.0,
+            "comment": "Erreur lors du calcul du score. Continue de scanner tes plats !"
+        }
     
     return {
         "total_meals_scanned": total_meals,

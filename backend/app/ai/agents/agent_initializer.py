@@ -10,6 +10,7 @@ from app.ai.agents.agent_coach.agent import CoachAgent
 from app.ai.agents.agent_medical.agent import MedicalAgent
 from app.ai.agents.agent_orchestrator.agent import OrchestratorAgent
 from app.db.mongo_client import db
+from app.ai.agents.agent_weekly_score.agent import WeeklyScoreAgent
 from fastapi import HTTPException
 import logging
 
@@ -23,6 +24,7 @@ _meal_suggestion_agent = None
 _coach_agent = None
 _medical_agent = None
 _orchestrator_agent = None
+_weekly_score_agent = None
 
 
 def get_food_analyzer() -> FoodAnalyzerAgent:
@@ -151,3 +153,19 @@ def get_medical_agent() -> MedicalAgent:
                 detail=f"Impossible d'initialiser l'agent médical: {str(e)}"
             )
     return _medical_agent
+
+def get_weekly_score_agent() -> WeeklyScoreAgent:
+    """Retrieve or create the singleton instance of WeeklyScoreAgent."""
+    global _weekly_score_agent
+    if _weekly_score_agent is None:
+        try:
+            _weekly_score_agent = WeeklyScoreAgent()
+            logger.info("WeeklyScoreAgent initialisé")
+        except Exception as e:
+            logger.error(f"Erreur initialisation WeeklyScoreAgent: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Impossible d'initialiser l'agent de notation hebdomadaire"
+            )
+    return _weekly_score_agent
+

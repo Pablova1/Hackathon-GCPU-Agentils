@@ -9,6 +9,8 @@ from fastapi import APIRouter
 from .analyze import router as analyze_router
 from .onboarding import router as onboarding_router
 from .profile import router as profile_router
+from .session import router as session_router
+from .auth import router as auth_router
 from .meal_suggestions import router as meal_suggestions_router
 from .suggestions import router as suggestions_router
 
@@ -16,6 +18,12 @@ from .suggestions import router as suggestions_router
 api_router = APIRouter()
 
 # Inclusion des sous-routes
+api_router.include_router(
+    auth_router,
+    prefix="/auth",
+    tags=["Authentification"]
+)
+
 api_router.include_router(
     analyze_router,
     prefix="/analyze",
@@ -33,6 +41,13 @@ api_router.include_router(
     prefix="/profile",
     tags=["Profil"]
 )
+
+api_router.include_router(
+    session_router,
+    prefix="/session",
+    tags=["Sessions"]
+)
+
 
 api_router.include_router(
     meal_suggestions_router,
