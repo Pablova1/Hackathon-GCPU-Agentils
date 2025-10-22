@@ -8,6 +8,14 @@
 
 Les Agentils on fait une plateforme intelligente de nutrition personnalisée qui utilise l'IA pour analyser les habitudes alimentaires, fournir des recommandations sur mesure et accompagner les utilisateurs dans leur parcours de bien-être.
 
+## Lancement Backend
+cd backend
+python run.py
+
+## Lancement Frontend
+cd frontend
+npm run dev
+
 ### 🎯 Fonctionnalités principales
 
 - **Onboarding intelligent** : Questionnaire adaptatif géré par IA pour créer un profil nutritionnel personnalisé
