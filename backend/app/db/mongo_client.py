@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 
 # Charger les variables d'environnement (.env)
-# From backend/app/db/mongo_client.py -> backend/.env (3 niveaux au-dessus)
-env_path = Path(__file__).parent.parent.parent / ".env"
+# From backend/app/db/mongo_client.py -> backend/.env (4 niveaux au-dessus)
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # Récupération des infos de connexion
