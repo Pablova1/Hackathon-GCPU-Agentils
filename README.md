@@ -16,6 +16,17 @@ python run.py
 cd frontend
 npm run dev
 
+## Lancement avec Docker
+docker-compose up --build
+docker-compose build --no-cache frontend ## Pour refresh le cache du front
+
+## Voir les conteneurs en cours d'execution
+docker ps -a
+
+## Arreter les conteneurs Docker en cours d'exécution
+docker-compose down
+docker stop $(docker ps -q)
+
 ### 🎯 Fonctionnalités principales
 
 - **Onboarding intelligent** : Questionnaire adaptatif géré par IA pour créer un profil nutritionnel personnalisé
