@@ -88,8 +88,13 @@ class OrchestratorAgent:
         profile = user_context.get("profile", {})
         goals = user_context.get("goals", {})
         
-        prompt = f"""You are a holistic health and wellness coach who provides integrated lifestyle recommendations combining nutrition, fitness, and medical considerations.
+        # Récupérer les statistiques d'entraînement et de nutrition
+        workout_stats = workout_suggestion.get("user_context", {}).get("workout_statistics", {})
+        meal_stats = meal_suggestion.get("user_context", {}).get("period_statistics", {})
+        
+        prompt = f"""You are an orchestrator agent that analyzes user data on training, nutrition, and health to generate two distinct outputs.
 
+## Context
 USER PROFILE:
 - Age: {profile.get('age')} years old
 - Gender: {profile.get('gender')}
@@ -100,7 +105,16 @@ USER GOALS:
 - Main Goal: {goals.get('mainGoal', 'General health')}
 - Target Weight: {goals.get('targetWeight', 'Not specified')} kg
 
-MEDICAL CONTEXT (from Medical Agent):
+RECENT WORKOUT DATA:
+- Frequency: {workout_stats.get('frequency_per_week', 0)} workouts/week
+- Consistency: {workout_stats.get('consistency', 'unknown')}
+- Total workouts: {workout_stats.get('total_workouts', 0)}
+
+RECENT NUTRITION DATA:
+- Total meals recorded: {meal_stats.get('total_meals', 0)}
+- Average calories: {meal_stats.get('totals', {}).get('calories', 0) / max(meal_stats.get('total_meals', 1), 1):.0f} kcal/meal
+
+MEDICAL CONTEXT:
 {medical_text if medical_text else "No specific medical constraints"}
 
 NUTRITION SUGGESTION (from Meal Agent):
@@ -109,22 +123,83 @@ NUTRITION SUGGESTION (from Meal Agent):
 FITNESS SUGGESTION (from Coach Agent):
 {workout_text}
 
-TASK:
-Create EXACTLY ONE unified, holistic daily recommendation that combines nutrition, fitness, AND medical considerations into a coherent action plan.
+## Required Outputs
 
-REQUIREMENTS:
-1. Integrate the meal, workout, and medical context into one cohesive plan
-2. Ensure timing makes sense (e.g., pre/post-workout nutrition if relevant)
-3. Account for medical constraints (medications, allergies, injuries)
-4. Highlight how the meal supports the workout and respects medical needs
-5. Keep it concise, motivating, and actionable
-6. One paragraph format (2-3 sentences max)
-7. Start with "Today's Plan:" or "Your Daily Focus:"
+### 1. Motivation Message (string)
+Generate ONE synthetic and encouraging sentence that:
+- Assesses the person's current overall fitness state
+- Is supportive and wellness-oriented
+- Remains positive and motivating
+- Is concise (max 2 short sentences)
 
-EXAMPLE OUTPUT:
-Today's Plan: Given your blood pressure medication, focus on low-sodium grilled chicken with quinoa for lunch (350 kcal). Complete your 45-minute upper body strength session at moderate intensity, staying hydrated. Avoid intense cardio and prioritize potassium-rich foods like bananas post-workout.
+Examples:
+- "You're in great shape, good recovery and healthy life! Keep going!"
+- "Your training is consistent and nutrition is balanced. Your body is responding well!"
+- "Take it easy this week, your body needs some rest. Recovery is progress too!"
 
-Now generate the unified suggestion:"""
+### 2. Meal Suggestions (array)
+Generate a list of **5 suggested meals** adapted to the user's profile that:
+- Match their current nutritional needs
+- Are varied and balanced (different meal types: breakfast, lunch, dinner, snack)
+- Account for their physical activity level
+- Consider their recovery state (higher protein if intense training, lighter meals if rest day)
+
+Each meal must include:
+- id (1-5)
+- name
+- description (short)
+- calories (realistic number)
+- macros (protein, carbs, fat in grams)
+- meal_type (breakfast, lunch, dinner, or snack)
+
+## IMPORTANT: Return ONLY a valid JSON object with this EXACT structure:
+{{
+  "motivation_message": "Your personalized motivating message here",
+  "meal_suggestions": [
+    {{
+      "id": 1,
+      "name": "Meal name",
+      "description": "Short meal description",
+      "calories": 650,
+      "macros": {{"protein": 45, "carbs": 60, "fat": 20}},
+      "meal_type": "breakfast"
+    }},
+    {{
+      "id": 2,
+      "name": "Another meal",
+      "description": "Description",
+      "calories": 580,
+      "macros": {{"protein": 42, "carbs": 50, "fat": 18}},
+      "meal_type": "lunch"
+    }},
+    {{
+      "id": 3,
+      "name": "Third meal",
+      "description": "Description",
+      "calories": 520,
+      "macros": {{"protein": 38, "carbs": 45, "fat": 20}},
+      "meal_type": "dinner"
+    }},
+    {{
+      "id": 4,
+      "name": "Fourth meal",
+      "description": "Description",
+      "calories": 320,
+      "macros": {{"protein": 25, "carbs": 35, "fat": 8}},
+      "meal_type": "snack"
+    }},
+    {{
+      "id": 5,
+      "name": "Fifth meal",
+      "description": "Description",
+      "calories": 480,
+      "macros": {{"protein": 35, "carbs": 55, "fat": 15}},
+      "meal_type": "breakfast"
+    }}
+  ]
+}}
+
+CRITICAL: Return ONLY the JSON object, no additional text, no markdown, no explanation. Just the raw JSON."""
         
         return prompt
     
@@ -189,13 +264,42 @@ Now generate the unified suggestion:"""
             logger.info(f"Calling Gemini ({self.model_name}) for orchestration...")
             response = self.model.generate_content(prompt)
             
-            unified_text = getattr(response, 'text', str(response)).strip()
+            raw_text = getattr(response, 'text', str(response)).strip()
+            
+            # Parser le JSON retourné par Gemini
+            import json
+            import re
+            
+            # Nettoyer le texte pour extraire uniquement le JSON
+            # Supprimer les balises markdown si présentes
+            json_text = raw_text
+            if "```json" in json_text:
+                json_text = re.search(r'```json\s*(\{.*?\})\s*```', json_text, re.DOTALL)
+                if json_text:
+                    json_text = json_text.group(1)
+            elif "```" in json_text:
+                json_text = re.search(r'```\s*(\{.*?\})\s*```', json_text, re.DOTALL)
+                if json_text:
+                    json_text = json_text.group(1)
+            
+            # Parser le JSON
+            try:
+                orchestrated_data = json.loads(json_text)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON from Gemini: {e}")
+                logger.error(f"Raw text: {raw_text}")
+                # Fallback: retourner un format par défaut
+                orchestrated_data = {
+                    "motivation_message": "Keep up the great work! Stay consistent with your nutrition and training.",
+                    "meal_suggestions": []
+                }
             
             logger.info("Unified suggestion generated successfully")
             
             result = {
                 "success": True,
-                "unified_suggestion": unified_text,
+                "motivation_message": orchestrated_data.get("motivation_message", ""),
+                "meal_suggestions": orchestrated_data.get("meal_suggestions", []),
                 "individual_suggestions": {
                     "meal": {
                         "suggestion": meal_suggestion.get("suggestion"),

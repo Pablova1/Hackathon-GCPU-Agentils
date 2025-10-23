@@ -72,22 +72,14 @@ class MedicalAgent:
         Récupère le contexte médical complet d'un utilisateur.
         
         Args:
-            user_id: ID de l'utilisateur
+            user_id: ID de l'utilisateur (string format "user_xxxxx")
             
         Returns:
             Dict contenant profil, antécédents, traitements et conditions
         """
-        # Convertir en ObjectId
-        if isinstance(user_id, str):
-            try:
-                user_oid = ObjectId(user_id)
-            except Exception:
-                user_oid = user_id
-        else:
-            user_oid = user_id
-        
-        # Récupérer l'utilisateur
-        user = await self.users_collection.find_one({"_id": user_oid})
+        # Récupérer l'utilisateur par user_id (string)
+        logger.info(f"Searching user with user_id={user_id}")
+        user = await self.users_collection.find_one({"user_id": user_id})
         
         if not user:
             logger.warning(f"Utilisateur non trouvé: {user_id}")
@@ -137,7 +129,7 @@ class MedicalAgent:
         }
         
         # Formater les traitements
-        for treatment in medical.get("treatments", medical.get("traitement", [])):
+        for treatment in (medical.get("treatments") or medical.get("traitement") or []):
             if isinstance(treatment, dict):
                 context["medical_info"]["treatments"].append({
                     "name": treatment.get("name", treatment.get("nom", "")),

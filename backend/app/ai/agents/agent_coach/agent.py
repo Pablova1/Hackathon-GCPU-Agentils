@@ -70,29 +70,18 @@ class CoachAgent:
         Récupère le contexte fitness complet d'un utilisateur.
         
         Args:
-            user_id: ID de l'utilisateur (string qui sera converti en ObjectId)
+            user_id: ID de l'utilisateur (string format "user_xxxxx")
             days: Nombre de jours d'historique sportif à récupérer
             
         Returns:
             Dict contenant profil, objectifs, et historique d'entraînement
         """
-        # Étape 1: Convertir user_id (string) en ObjectId pour chercher dans collection user
-        if isinstance(user_id, str):
-            try:
-                user_oid = ObjectId(user_id)
-                logger.info(f"Converted user_id '{user_id}' to ObjectId for user collection lookup")
-            except Exception as e:
-                logger.error(f"Failed to convert user_id to ObjectId: {e}")
-                user_oid = user_id
-        else:
-            user_oid = user_id
-        
-        # Étape 2: Récupérer l'utilisateur via _id (ObjectId) dans collection user
-        logger.info(f"Searching user with _id={user_oid}")
-        user = await self.users_collection.find_one({"_id": user_oid})
+        # Récupérer l'utilisateur par user_id (string)
+        logger.info(f"Searching user with user_id={user_id}")
+        user = await self.users_collection.find_one({"user_id": user_id})
         
         if not user:
-            logger.warning(f"User not found with _id={user_oid}")
+            logger.warning(f"User not found with user_id={user_id}")
             return {"error": f"User not found: {user_id}"}
         
         logger.info(f"User found: {user.get('profile', {}).get('firstName', 'Unknown')} {user.get('profile', {}).get('lastName', '')}")
@@ -101,29 +90,17 @@ class CoachAgent:
         start_date = datetime.now() - timedelta(days=days)
         start_date_str = start_date.isoformat()
         
-        # Étape 3: Convertir user._id (ObjectId) en string pour chercher dans workouts
-        # Important: workouts.userId est un STRING, pas un ObjectId!
-        userId_for_workouts = str(user["_id"])
-        
-        logger.info(f"Searching workouts with userId='{userId_for_workouts}' (string)")
+        # Utiliser le user_id (string) pour chercher dans workouts
+        logger.info(f"Searching workouts with userId='{user_id}' (string)")
         
         # Chercher avec userId (camelCase, string) - format dans la collection workouts
         workouts_cursor = self.workouts_collection.find({
-            "userId": userId_for_workouts,
+            "userId": user_id,
             "date": {"$gte": start_date_str}
         }).sort("date", -1)
         recent_workouts = await workouts_cursor.to_list(length=None)
         
-        # Si aucun workout trouvé, essayer aussi avec user_id (snake_case) au cas où
-        if not recent_workouts:
-            logger.info(f"No workouts found with 'userId', trying 'user_id' (snake_case)...")
-            workouts_cursor = self.workouts_collection.find({
-                "user_id": userId_for_workouts,
-                "date": {"$gte": start_date_str}
-            }).sort("date", -1)
-            recent_workouts = await workouts_cursor.to_list(length=None)
-        
-        logger.info(f"Retrieved {len(recent_workouts)} workouts for userId='{userId_for_workouts}'")
+        logger.info(f"Retrieved {len(recent_workouts)} workouts for userId='{user_id}'")
         
         # Extraire les données du profil
         profile = user.get("profile", user.get("profil", {}))
