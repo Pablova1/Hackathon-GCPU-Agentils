@@ -24,8 +24,8 @@ docker-compose build --no-cache frontend ## Pour refresh le cache du front
 docker ps -a
 
 ## Arreter les conteneurs Docker en cours d'exécution
-docker-compose down
-docker stop $(docker ps -q)
+docker-compose down # Arrête ET supprime les conteneurs
+docker stop $(docker ps -q) # Arrête les conteneurs en cours d'exécution
 
 ### 🎯 Fonctionnalités principales
 
