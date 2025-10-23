@@ -135,8 +135,18 @@ export default function Home() {
     <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Food Analyzer</h1>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ marginRight: '15px' }}>Bonjour, {firstName} {lastName}!</span>
+          <button onClick={() => router.push('/suggestion')} style={{ 
+            padding: '8px 16px',
+            background: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}>
+            Voir mes suggestions
+          </button>
           <button onClick={handleLogout} style={{ 
             padding: '8px 16px',
             background: '#f44336',
