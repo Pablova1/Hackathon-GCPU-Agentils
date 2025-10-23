@@ -1,6 +1,6 @@
 from datetime import datetime
 from app.db.mongo_client import get_database
-from app.models.user import (
+from app.models.profile_model import (
     UserDocument, ProfileCore, Medical, Nutrition, Goals, 
     MedicalHistory, BirthControl, Treatment, Preferences, 
     ReligiousRestrictions, Misc

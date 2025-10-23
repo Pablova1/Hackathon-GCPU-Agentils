@@ -9,6 +9,7 @@ export default function Home() {
   const [sessionToken, setSessionToken] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // Nouvel état pour éviter les doubles soumissions
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
@@ -98,6 +99,15 @@ export default function Home() {
       return;
     }
 
+    // Éviter les doubles soumissions
+    if (isAnalyzing) {
+      console.log('Analysis already in progress, ignoring duplicate request');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setError(null);
+
     try {
       const res = await fetch('http://localhost:8000/api/analyze/nutrients', {
         method: 'POST',
@@ -123,6 +133,8 @@ export default function Home() {
       setError(null);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -183,7 +195,13 @@ export default function Home() {
             ))}
           </ul>
           <button onClick={handleAddAliment}>Add Aliment</button>
-          <button onClick={handleValidateAliments}>Validate Aliments</button>
+          <button 
+            onClick={handleValidateAliments} 
+            disabled={isAnalyzing}
+            style={{ opacity: isAnalyzing ? 0.5 : 1, cursor: isAnalyzing ? 'not-allowed' : 'pointer' }}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Validate Aliments'}
+          </button>
         </div>
       )}
     </div>
