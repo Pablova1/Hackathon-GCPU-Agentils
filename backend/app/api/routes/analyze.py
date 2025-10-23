@@ -2,7 +2,7 @@
 Routes pour l'analyse d'assiettes.
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -146,10 +146,12 @@ async def analyze_plate(
 @router.post("/nutrients")
 async def analyze_nutrients(
     aliments: List[Aliment],
+    background_tasks: BackgroundTasks,
     session: dict = Depends(get_current_session)
 ):
     """
     Analyse les nutriments pour une liste d'aliments.
+    Déclenche automatiquement la génération de suggestions en arrière-plan.
     
     **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
 
@@ -237,12 +239,18 @@ async def analyze_nutrients(
         created_meal = await create_meal(meal_create)
         logger.info(f"🍽️ Repas créé dans la collection meals avec ID: {created_meal['_id']}")
 
+        # 🚀 NOUVEAU : Déclencher la génération de suggestions en arrière-plan
+        from app.api.routes.suggestions import generate_and_store_suggestions
+        background_tasks.add_task(generate_and_store_suggestions, user_id, 7)
+        logger.info(f"🔄 Background suggestion generation triggered for user {user_id}")
+
         return {
             "success": True,
             "nutrients": result,
             "nutrient_summary": nutrient_summary,
             "meal_id": str(created_meal['_id']),
-            "message": "Analyse des nutriments réussie et repas enregistré."
+            "message": "Analyse des nutriments réussie et repas enregistré. Suggestions en cours de génération.",
+            "suggestion_status": "generating"
         }
 
     except ValueError as e:
