@@ -91,21 +91,6 @@ async def analyze_plate(
         for aliment in aliments:
             aliment["estimated_quantity"] = int(aliment["estimated_quantity"])
 
-        # 🆕 SAUVEGARDE de l'analyse dans MongoDB
-        db = await get_database()
-        analyses_collection = db["plate_analyses"]
-        
-        analysis_record = {
-            "user_id": user_id,
-            "session_token": session_token,
-            "image_filename": unique_filename,
-            "aliments": aliments,
-            "nombre_aliments": len(aliments),
-            "analyzed_at": datetime.now().isoformat()
-        }
-        
-        await analyses_collection.insert_one(analysis_record)
-        
         response = {
             "success": True,
             "aliments": aliments,
@@ -190,26 +175,10 @@ async def analyze_nutrients(
 
         # Log the nutrient summary
         logger.info(f"Nutrient summary: {nutrient_summary}")
-        
-        # 🆕 SAUVEGARDE de l'analyse nutritionnelle dans MongoDB
-        db = await get_database()
-        nutrient_analyses = db["nutrient_analyses"]
-        
-        nutrient_record = {
-            "user_id": user_id,
-            "session_token": session_token,
-            "aliments": aliments_data,
-            "nutrients": result,
-            "nutrient_summary": nutrient_summary,
-            "analyzed_at": datetime.now().isoformat()
-        }
-        
-        await nutrient_analyses.insert_one(nutrient_record)
-        logger.info(f"✅ Analyse nutritionnelle sauvegardée pour user {user_id}")
 
-        # 🔥 JONCTION : Créer un repas dans la collection meals pour le scoring hebdomadaire
+        # 🔥 Créer un repas dans la collection meals (unique source de vérité)
         from app.db.meal_store import create_meal
-        from app.models.meal_model import MealCreate, Nutrients
+        from app.models.meal_model import MealCreate, Nutrients, Micronutrients
         
         # Extraire les ingrédients depuis aliments_data
         ingredients = [aliment["name"] for aliment in aliments_data]
@@ -217,13 +186,30 @@ async def analyze_nutrients(
         # Créer l'objet Nutrients depuis le nutrient_summary
         # nutrient_summary a la structure: {"nutritional_values": {...}, "micronutrients": {...}}
         nutritional_values = nutrient_summary.get("nutritional_values", {})
+        micronutrients_data = nutrient_summary.get("micronutrients", {})
         
+        # Créer l'objet Micronutrients
+        meal_micronutrients = Micronutrients(
+            calcium_mg=micronutrients_data.get("calcium_mg", 0),
+            iron_mg=micronutrients_data.get("iron_mg", 0),
+            magnesium_mg=micronutrients_data.get("magnesium_mg", 0),
+            potassium_mg=micronutrients_data.get("potassium_mg", 0),
+            sodium_mg=micronutrients_data.get("sodium_mg", 0),
+            zinc_mg=micronutrients_data.get("zinc_mg", 0),
+            phosphorus_mg=micronutrients_data.get("phosphorus_mg", 0)
+        )
+        
+        # Créer l'objet Nutrients complet
         meal_nutrients = Nutrients(
-            calories=nutritional_values.get("energy_kcal", 0),
-            protein=nutritional_values.get("proteins_g", 0),
-            fat=nutritional_values.get("lipids_g", 0),
-            carbohydrates=nutritional_values.get("carbohydrates_g", 0),
-            fiber=nutritional_values.get("fiber_g", 0)
+            energy_kcal=nutritional_values.get("energy_kcal", 0),
+            proteins_g=nutritional_values.get("proteins_g", 0),
+            carbohydrates_g=nutritional_values.get("carbohydrates_g", 0),
+            lipids_g=nutritional_values.get("lipids_g", 0),
+            fiber_g=nutritional_values.get("fiber_g", 0),
+            sugars_g=nutritional_values.get("sugars_g", 0),
+            saturated_fats_g=nutritional_values.get("saturated_fats_g", 0),
+            unsaturated_fats_g=nutritional_values.get("unsaturated_fats_g", 0),
+            micronutrients=meal_micronutrients
         )
         
         # Créer le repas
@@ -285,88 +271,3 @@ async def health_check():
             status_code=503,
             detail=f"Service indisponible: {str(e)}"
         )
-
-@router.get("/history")
-async def get_analysis_history(
-    session: dict = Depends(get_current_session),
-    limit: int = 10
-):
-    """
-    Récupère l'historique des analyses d'assiettes pour l'utilisateur courant.
-    
-    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
-    
-    - **limit**: Nombre maximum de résultats (par défaut: 10)
-    
-    Headers:
-        - X-Session-Token: Token de session valide
-        
-    Returns:
-        Liste des analyses précédentes de l'utilisateur
-    """
-    user_id = session["user_id"]
-    
-    db = await get_database()
-    analyses_collection = db["plate_analyses"]
-    
-    # Récupération des analyses de l'utilisateur
-    cursor = analyses_collection.find(
-        {"user_id": user_id}
-    ).sort("analyzed_at", -1).limit(limit)
-    
-    analyses = await cursor.to_list(length=limit)
-    
-    # Nettoyage des résultats (retirer _id de MongoDB)
-    for analysis in analyses:
-        analysis.pop("_id", None)
-    
-    logger.info(f"📊 Historique récupéré pour user {user_id}: {len(analyses)} analyses")
-    
-    return {
-        "user_id": user_id,
-        "total": len(analyses),
-        "analyses": analyses
-    }
-
-
-@router.get("/nutrients/history")
-async def get_nutrient_history(
-    session: dict = Depends(get_current_session),
-    limit: int = 10
-):
-    """
-    Récupère l'historique des analyses nutritionnelles pour l'utilisateur courant.
-    
-    **Authentification requise** : Vous devez fournir un header `X-Session-Token`.
-    
-    - **limit**: Nombre maximum de résultats (par défaut: 10)
-    
-    Headers:
-        - X-Session-Token: Token de session valide
-        
-    Returns:
-        Liste des analyses nutritionnelles précédentes de l'utilisateur
-    """
-    user_id = session["user_id"]
-    
-    db = await get_database()
-    nutrient_analyses = db["nutrient_analyses"]
-    
-    # Récupération des analyses de l'utilisateur
-    cursor = nutrient_analyses.find(
-        {"user_id": user_id}
-    ).sort("analyzed_at", -1).limit(limit)
-    
-    analyses = await cursor.to_list(length=limit)
-    
-    # Nettoyage des résultats
-    for analysis in analyses:
-        analysis.pop("_id", None)
-    
-    logger.info(f"🥗 Historique nutritionnel récupéré pour user {user_id}: {len(analyses)} analyses")
-    
-    return {
-        "user_id": user_id,
-        "total": len(analyses),
-        "analyses": analyses
-    }

@@ -84,7 +84,16 @@ def test_complete_meal_flow():
     meal = response.json()
     print(f"   ✅ Repas récupéré: {meal['name']}")
     print(f"   🥗 Ingrédients: {meal['ingredients']}")
-    print(f"   💪 Calories: {meal['nutrients']['calories']} kcal")
+    print(f"   💪 Énergie: {meal['nutrients']['energy_kcal']} kcal")
+    print(f"   🥩 Protéines: {meal['nutrients']['proteins_g']}g")
+    print(f"   🍞 Glucides: {meal['nutrients']['carbohydrates_g']}g")
+    print(f"   🧈 Lipides: {meal['nutrients']['lipids_g']}g")
+    print(f"   🌾 Fibres: {meal['nutrients']['fiber_g']}g")
+    print(f"   🍬 Sucres: {meal['nutrients']['sugars_g']}g")
+    
+    # Vérifier que les micronutriments sont présents
+    assert "micronutrients" in meal['nutrients'], "Micronutriments manquants"
+    print(f"   🧪 Micronutriments présents: {list(meal['nutrients']['micronutrients'].keys())}")
     
     # 4. Vérifier que le repas apparaît dans les statistiques
     print("\n4️⃣ Vérification que le repas apparaît dans les statistiques...")

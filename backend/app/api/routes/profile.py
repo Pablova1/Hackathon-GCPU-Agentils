@@ -51,15 +51,7 @@ async def delete_user_profile(session: dict = Depends(get_current_session)):
         # 1. Supprimer tous les repas de l'utilisateur
         meals_deleted = await delete_user_meals(user_id)
         
-        # 2. Supprimer les analyses d'assiettes
-        plate_analyses = db["plate_analyses"]
-        await plate_analyses.delete_many({"user_id": user_id})
-        
-        # 3. Supprimer les analyses nutritionnelles
-        nutrient_analyses = db["nutrient_analyses"]
-        await nutrient_analyses.delete_many({"user_id": user_id})
-        
-        # 4. Supprimer l'utilisateur
+        # 2. Supprimer l'utilisateur
         users_collection = db["user"]
         result = await users_collection.delete_one({"user_id": user_id})
         
