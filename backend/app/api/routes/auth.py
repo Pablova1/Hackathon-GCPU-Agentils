@@ -97,32 +97,54 @@ async def register(request: RegisterRequest):
         "created_at": now,
         "last_login": now,
         "profile_completed": False,
-        
         # Session intégrée dans le document user
         "session_token": session_token,
         "session_created_at": now,
         "session_expires_at": now + timedelta(hours=24),
         "last_activity": now,
-        
         # Profil de base avec email, prénom, nom
         "profile": {
             "firstName": request.first_name,
             "lastName": request.last_name,
             "email": request.email.lower(),
-            # Les autres champs seront remplis lors de l'onboarding
             "age": 0,
             "gender": "Other",
             "weight": 0.0,
             "height": 0.0,
             "bodyType": "unknown"
         },
-        
         # Les autres sections seront remplies lors de l'onboarding
-        "medical": None,
-        "nutrition": None,
-        "goals": None,
-        "religiousRestrictions": None,
-        "misc": None
+        "medical": {
+            "treatments": None,
+            "allergies": None,
+            "medicalHistory": {
+                "personal": None,
+                "family": None
+            },
+            "birthControl": None
+        },
+        "nutrition": {
+            "diet": None,
+            "intolerances": None,
+            "preferences": None
+        },
+        "goals": {
+            "muscleGain": None,
+            "weightLoss": None,
+            "goalDetail": None,
+            "performance": None,
+            "maintainShape": None
+        },
+        "religiousRestrictions": {
+            "practicing": None,
+            "type": None
+        },
+        "misc": {
+            "activityLevel": None,
+            "sports": None,
+            "occupation": None,
+            "notes": None
+        }
     }
     
     result = await users.insert_one(user_data)

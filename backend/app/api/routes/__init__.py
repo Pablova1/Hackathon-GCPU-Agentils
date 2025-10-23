@@ -11,6 +11,8 @@ from .onboarding import router as onboarding_router
 from .profile import router as profile_router
 from .session import router as session_router
 from .auth import router as auth_router
+from .meal_suggestions import router as meal_suggestions_router
+from .suggestions import router as suggestions_router
 
 # Router principal qui agrège toutes les routes
 api_router = APIRouter()
@@ -44,4 +46,17 @@ api_router.include_router(
     session_router,
     prefix="/session",
     tags=["Sessions"]
+)
+
+
+api_router.include_router(
+    meal_suggestions_router,
+    prefix="/meal-suggestions",
+    tags=["Meal Suggestions"]
+)
+
+api_router.include_router(
+    suggestions_router,
+    prefix="/suggestions",
+    tags=["Unified Suggestions"]
 )
