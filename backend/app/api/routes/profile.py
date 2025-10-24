@@ -2,17 +2,51 @@
 Routes pour la gestion des profils utilisateur.
 
 Endpoints:
+- GET /check: Vérifie si l'utilisateur a complété son profil
 - POST /start: Crée un nouveau profil utilisateur complet
 - DELETE /delete: Supprime l'utilisateur et toutes ses données
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from app.models.profile_model import UserDocument
 from app.services.profile_services import save_user_profile
 from app.middleware.session_manager import get_current_session
 
 # Router sans préfixe (ajouté dans routes/__init__.py)
 router = APIRouter()
+
+@router.get("/check")
+async def check_profile_status(user_id: str = Query(..., description="ID de l'utilisateur")):
+    """
+    Endpoint: /profile/check
+    Vérifie si l'utilisateur a complété son profil d'onboarding.
+    
+    Retourne:
+    {
+        "profile_completed": bool,
+        "user_exists": bool
+    }
+    """
+    try:
+        from app.db.mongo_client import get_database
+        
+        db = await get_database()
+        users_collection = db["user"]
+        
+        user = await users_collection.find_one({"user_id": user_id})
+        
+        if not user:
+            return {
+                "profile_completed": False,
+                "user_exists": False
+            }
+        
+        return {
+            "profile_completed": user.get("profile_completed", False),
+            "user_exists": True
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")
 
 @router.post("/start")
 async def create_profile(data: UserDocument) -> dict:

@@ -26,6 +26,14 @@ export default function Auth() {
 
   // Vérifier si déjà connecté au chargement
   useEffect(() => {
+    // Si le paramètre ?logout=true est présent, déconnecter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logout') === 'true') {
+      localStorage.clear();
+      window.history.replaceState({}, '', '/auth');
+      return;
+    }
+    
     const sessionToken = localStorage.getItem('session_token');
     if (sessionToken) {
       // Déjà connecté, rediriger vers l'app
@@ -129,11 +137,11 @@ export default function Auth() {
         localStorage.setItem('last_name', data.last_name);
         localStorage.setItem('email', data.email);
 
-        setSuccess('Inscription réussie ! Redirection...');
+        setSuccess('Inscription réussie ! Redirection vers l\'onboarding...');
         
-        // Rediriger vers la page principale après 1 seconde
+        // Rediriger vers l'onboarding après l'inscription
         setTimeout(() => {
-          router.push('/');
+          router.push('/onboarding');
         }, 1000);
       } else {
         // Gérer les erreurs de validation (422) et les erreurs métier (400)

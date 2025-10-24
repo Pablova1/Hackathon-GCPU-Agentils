@@ -1,6 +1,5 @@
 REQUIRED_SLOTS = [
-    "firstName",
-    "lastName",
+    # "firstName" et "lastName" supprimés car déjà fournis lors de l'inscription
     "birthDate",
     "gender",
     "heightCm",
@@ -11,13 +10,12 @@ REQUIRED_SLOTS = [
 ]
 
 QUESTION_BANK = {
-    "firstName":    {"text": "Quel est ton prénom ?", "type": "text"},
-    "lastName":     {"text": "Quel est ton nom de famille ?", "type": "text"},
-    "birthDate":    {"text": "Quelle est ta date de naissance ? (YYYY-MM-DD)", "type": "text"},
+    # Questions nom/prénom retirées car déjà dans l'inscription
+    "birthDate":    {"text": "Quelle est ta date de naissance ?", "type": "date", "placeholder": "JJ/MM/AAAA"},
     "gender":       {"text": "Quel est ton genre ?", "type": "single_choice",
                      "choices": ["Male", "Female", "Other"]},
-    "heightCm":     {"text": "Quelle est ta taille (en cm) ?", "type": "number"},
-    "weightKg":     {"text": "Quel est ton poids (en kg) ?", "type": "number"},
+    "heightCm":     {"text": "Quelle est ta taille (en cm) ?", "type": "number", "placeholder": "Ex: 170"},
+    "weightKg":     {"text": "Quel est ton poids (en kg) ?", "type": "number", "placeholder": "Ex: 70"},
     "bodyType":     {"text": "Quel est ton type de morphologie ?", "type": "single_choice",
                      "choices": ["ectomorphic", "mesomorphic", "endomorphic", "unknown"]},
     "dietType":     {"text": "As-tu un régime alimentaire particulier ?", "type": "single_choice",
@@ -32,6 +30,16 @@ def first_question() -> dict:
     q = dict(QUESTION_BANK[slot])  # copie
     q["slot"] = slot
     return q
+
+def all_questions() -> list[dict]:
+    """Retourne toutes les questions requises pour l'onboarding."""
+    questions = []
+    for slot in REQUIRED_SLOTS:
+        q = dict(QUESTION_BANK[slot])  # copie
+        q["slot"] = slot
+        q["required"] = True
+        questions.append(q)
+    return questions
 
 def next_required_slot(slots: dict) -> str | None:
     """Renvoie le prochain slot requis manquant, ou None si tout est rempli."""

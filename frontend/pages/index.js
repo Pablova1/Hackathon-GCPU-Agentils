@@ -13,18 +13,47 @@ export default function Home() {
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    const token = localStorage.getItem('session_token');
-    const first = localStorage.getItem('first_name');
-    const last = localStorage.getItem('last_name');
-    
-    if (!token) {
-      // Pas de session, rediriger vers la page d'authentification
-      router.push('/auth');
-    } else {
+    const checkAuthAndProfile = async () => {
+      const token = localStorage.getItem('session_token');
+      const userId = localStorage.getItem('user_id');
+      const first = localStorage.getItem('first_name');
+      const last = localStorage.getItem('last_name');
+      
+      if (!token) {
+        // Pas de session, rediriger vers la page d'authentification
+        router.push('/auth');
+        return;
+      }
+
+      // Vérifier si le profil est complété
+      if (userId) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/profile/check?user_id=${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (!data.profile_completed) {
+              // Profil non complété, rediriger vers l'onboarding
+              router.push('/onboarding');
+              return;
+            }
+          }
+        } catch (err) {
+          console.log('Erreur lors de la vérification du profil:', err);
+          // Continuer même en cas d'erreur
+        }
+      }
+
       setSessionToken(token);
       setFirstName(first || '');
       setLastName(last || 'Utilisateur');
-    }
+    };
+
+    checkAuthAndProfile();
   }, [router]);
 
   const handleLogout = () => {

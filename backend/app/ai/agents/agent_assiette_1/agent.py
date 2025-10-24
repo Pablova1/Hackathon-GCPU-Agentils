@@ -5,9 +5,9 @@ Agent for analyzing macro-nutrients and micro-nutrients based on a list of alime
 import os
 import json
 import logging
+import requests
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 # Configure logging
 logging.basicConfig(
@@ -95,17 +95,15 @@ class NutrientAnalyzerAgent:
             load_dotenv(dotenv_path=env_path)
         
         # Récupère la clé API
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
+        self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
         if not self.api_key:
             raise ValueError(
                 "Clé API manquante. Définis GOOGLE_API_KEY dans .env "
                 "ou passe api_key au constructeur."
             )
         
-        # Configure Gemini
-        genai.configure(api_key=self.api_key)
+        # Sauvegarde du nom du modèle
         self.model_name = model_name
-        self.model = genai.GenerativeModel(model_name)
         
         logger.info(f"NutrientAnalyzerAgent initialisé avec le modèle {model_name}")
 
@@ -160,12 +158,12 @@ class NutrientAnalyzerAgent:
         
         
         try:
-            # Appel à l'API Gemini (comme dans FoodAnalyzerAgent)
+            # Appel à l'API Gemini REST
             print("Appel à l'API Gemini...")
-            response = self.model.generate_content(prompt)
+            response_text = self._call_gemini_api(prompt)
             
             # Parse la réponse
-            result = self._parse_response(response.text)
+            result = self._parse_response(response_text)
             
             logger.info("Analyse nutritionnelle terminée avec succès")
             
@@ -179,6 +177,62 @@ class NutrientAnalyzerAgent:
             logger.error(f"Erreur lors de l'analyse nutritionnelle: {e}")
             print(f"Erreur: {e}")
             raise RuntimeError(f"An error occurred while analyzing nutrients: {e}")
+    
+    def _call_gemini_api(self, prompt: str, timeout: int = 30) -> str:
+        """
+        Appelle l'API Google Gemini.
+        
+        Args:
+            prompt: Le prompt à envoyer
+            timeout: Timeout de la requête en secondes
+            
+        Returns:
+            La réponse de l'IA
+        """
+        # Utiliser gemini-2.0-flash-exp qui supporte les API keys
+        model_name = "gemini-2.0-flash-exp"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+        
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 4096,
+                "topP": 0.9,
+                "topK": 40
+            }
+        }
+        
+        try:
+            logger.debug(f"Appel API Gemini: {url}")
+            response = requests.post(url, json=payload, timeout=timeout)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Extraire le texte de la réponse
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            logger.debug(f"Réponse API: {text[:100]}...")
+            
+            return text
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
+            raise Exception(f"Timeout de l'API Gemini après {timeout}s")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Erreur HTTP lors de l'appel à l'API Gemini: {e}")
+            if hasattr(e.response, 'text'):
+                logger.error(f"Réponse d'erreur: {e.response.text}")
+            raise Exception(f"Erreur API Gemini: {str(e)}")
+        except (KeyError, IndexError) as e:
+            logger.error(f"Format de réponse inattendu de l'API Gemini: {e}")
+            logger.error(f"Données reçues: {data}")
+            raise Exception(f"Format de réponse invalide: {str(e)}")
 
     def format_results(self, result: Dict) -> str:
         """

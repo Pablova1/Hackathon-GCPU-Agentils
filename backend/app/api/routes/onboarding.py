@@ -3,13 +3,15 @@ Routes pour le processus d'onboarding utilisateur.
 
 Endpoints:
 - POST /start: Démarre une session d'onboarding
-- POST /answer: Enregistre une réponse et retourne la prochaine question
+- GET /questions: Retourne toutes les questions d'onboarding
+- POST /submit-all: Soumet toutes les réponses en une fois
+- POST /answer: Enregistre une réponse et retourne la prochaine question (ancien mode)
 """
 
 from fastapi import APIRouter, HTTPException, Query, Body
 from app.db.session_store import create_session, get_session, update_session
 from app.db.user_store import create_user_document
-from app.services.onboarding_planner import QUESTION_BANK, first_question, next_required_slot, question_for_slot
+from app.services.onboarding_planner import QUESTION_BANK, first_question, all_questions, next_required_slot, question_for_slot
 from app.ai.agents.agent_onboarding.agent import suggest_followup
 from pydantic import BaseModel
 from datetime import datetime
@@ -25,6 +27,116 @@ class AnswerRequest(BaseModel):
     session_id: str
     slot: str
     value: str | int | float
+
+
+class AllAnswersRequest(BaseModel):
+    user_id: str
+    answers: dict[str, str | int | float]
+
+
+@router.get("/questions")
+async def get_all_questions():
+    """
+    Retourne toutes les questions d'onboarding en une seule fois.
+    Utilisé pour afficher un formulaire complet sur une seule page.
+    """
+    questions = all_questions()
+    return {"questions": questions}
+
+
+@router.post("/submit-all")
+async def submit_all_answers(request: AllAnswersRequest):
+    """
+    Soumet toutes les réponses d'onboarding en une seule fois.
+    Crée ou met à jour le profil utilisateur.
+    Le prénom et nom sont récupérés depuis le document utilisateur existant.
+    """
+    try:
+        # Récupérer les informations existantes de l'utilisateur (créé lors de l'inscription)
+        from app.db.mongo_client import get_database
+        db = await get_database()
+        users = db["user"]
+        
+        existing_user = await users.find_one({"user_id": request.user_id})
+        if not existing_user:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Utilisateur {request.user_id} non trouvé. Veuillez d'abord vous inscrire."
+            )
+        
+        # Récupérer le prénom et nom depuis le profil existant
+        first_name = existing_user.get("profile", {}).get("firstName", "")
+        last_name = existing_user.get("profile", {}).get("lastName", "")
+        
+        # Créer une session
+        session = await create_session(request.user_id)
+        session_id = session["session_id"]
+        
+        # Valider toutes les réponses
+        for slot, value in request.answers.items():
+            if not validate_answer(slot, value):
+                raise HTTPException(status_code=400, detail=f"Réponse invalide pour {slot}")
+        
+        # Vérifier que toutes les questions obligatoires ont une réponse
+        from app.services.onboarding_planner import REQUIRED_SLOTS
+        missing_slots = [s for s in REQUIRED_SLOTS if s not in request.answers]
+        if missing_slots:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Questions obligatoires manquantes: {', '.join(missing_slots)}"
+            )
+        
+        # Ajouter le prénom et nom aux réponses pour le mapping
+        complete_answers = dict(request.answers)
+        complete_answers["firstName"] = first_name
+        complete_answers["lastName"] = last_name
+        
+        # Enregistrer toutes les réponses dans la session
+        await update_session(session_id, {"slots": complete_answers})
+        
+        # Mapper les réponses vers le format complet du profil
+        mapped = map_minimal_slots_to_full_profile(complete_answers)
+        
+        # Mettre à jour l'utilisateur existant avec les nouvelles informations
+        update_data = {
+            "profile.age": mapped["age"],
+            "profile.gender": mapped["gender"],
+            "profile.weight": mapped["weight_kg"],
+            "profile.height": mapped["height_cm"],
+            "profile.bodyType": mapped["bodyType"],
+            "nutrition.diet": mapped["diet"],
+            "misc.activityLevel": mapped["activityLevel"],
+            "profile_completed": True,
+            "onboarded_at": datetime.now()
+        }
+        
+        result = await users.update_one(
+            {"user_id": request.user_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            logger.warning(f"Aucune modification pour l'utilisateur {request.user_id}")
+        
+        # Mettre à jour la session
+        await update_session(session_id, {
+            "state": "COMPLETED"
+        })
+        
+        logger.info(f"Profil complété avec succès pour l'utilisateur {request.user_id}")
+        
+        return {
+            "success": True,
+            "message": "Profil complété avec succès",
+            "session_id": session_id,
+            "profile_completed": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors de la soumission complète: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création du profil: {str(e)}")
 
 
 @router.post("/start")

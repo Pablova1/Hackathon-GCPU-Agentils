@@ -5,10 +5,11 @@ Agent d'analyse de composition d'assiettes utilisant Google Gemini.
 import os
 import json
 import logging
+import requests
+import base64
 from typing import Dict, List, Optional, Union
 from pathlib import Path
 from dotenv import load_dotenv
-import google.generativeai as genai
 from PIL import Image
 
 
@@ -68,17 +69,15 @@ class FoodAnalyzerAgent:
             load_dotenv(dotenv_path=env_path)
         
         # Récupère la clé API
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
+        self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
         if not self.api_key:
             raise ValueError(
                 "Clé API manquante. Définis GOOGLE_API_KEY dans .env "
                 "ou passe api_key au constructeur."
             )
         
-        # Configure Gemini
-        genai.configure(api_key=self.api_key)
+        # Sauvegarde du nom du modèle
         self.model_name = model_name
-        self.model = genai.GenerativeModel(model_name)
         
         logger.info(f"Agent initialisé avec le modèle {model_name}")
     
@@ -99,6 +98,91 @@ class FoodAnalyzerAgent:
         except Exception as e:
             logger.error(f"Erreur lors du chargement de l'image: {e}")
             raise
+    
+    def _image_to_base64(self, image_path: Union[str, Path]) -> str:
+        """
+        Convertit une image en base64.
+        
+        Args:
+            image_path: Chemin vers l'image
+            
+        Returns:
+            Image encodée en base64
+        """
+        try:
+            with open(image_path, 'rb') as image_file:
+                image_data = image_file.read()
+                encoded = base64.b64encode(image_data).decode('utf-8')
+                logger.info(f"Image encodée en base64: {len(encoded)} caractères")
+                return encoded
+        except Exception as e:
+            logger.error(f"Erreur lors de l'encodage de l'image: {e}")
+            raise
+    
+    def _call_gemini_api(self, prompt: str, image_base64: str, timeout: int = 30) -> str:
+        """
+        Appelle l'API Google Gemini avec une image.
+        
+        Args:
+            prompt: Le prompt à envoyer
+            image_base64: Image encodée en base64
+            timeout: Timeout de la requête en secondes
+            
+        Returns:
+            La réponse de l'IA
+        """
+        # Utiliser gemini-2.0-flash-exp qui supporte les API keys
+        model_name = "gemini-2.0-flash-exp"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+        
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                                "mimeType": "image/jpeg",
+                                "data": image_base64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 2048,
+                "topP": 0.9,
+                "topK": 40
+            }
+        }
+        
+        try:
+            logger.debug(f"Appel API Gemini: {url}")
+            response = requests.post(url, json=payload, timeout=timeout)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Extraire le texte de la réponse
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            logger.debug(f"Réponse API: {text[:100]}...")
+            
+            return text
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
+            raise Exception(f"Timeout de l'API Gemini après {timeout}s")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Erreur HTTP lors de l'appel à l'API Gemini: {e}")
+            if hasattr(e.response, 'text'):
+                logger.error(f"Réponse d'erreur: {e.response.text}")
+            raise Exception(f"Erreur API Gemini: {str(e)}")
+        except (KeyError, IndexError) as e:
+            logger.error(f"Format de réponse inattendu de l'API Gemini: {e}")
+            logger.error(f"Données reçues: {data}")
+            raise Exception(f"Format de réponse invalide: {str(e)}")
     
     def _parse_response(self, response_text: str) -> Dict:
         """
@@ -161,19 +245,19 @@ class FoodAnalyzerAgent:
         """
         logger.info(f"Début de l'analyse de: {image_path}")
         
-        # Charge l'image
-        image = self._load_image(image_path)
+        # Charge l'image et convertis en base64
+        image_base64 = self._image_to_base64(image_path)
         
         # Utilise le prompt personnalisé ou le prompt par défaut
         prompt = custom_prompt or self.PROMPT_TEMPLATE
         
-        # Génère la réponse
+        # Génère la réponse via l'API REST
         try:
-            response = self.model.generate_content([prompt, image])
+            response_text = self._call_gemini_api(prompt, image_base64)
             logger.info("Réponse reçue du modèle")
             
             # Parse la réponse
-            result = self._parse_response(response.text)
+            result = self._parse_response(response_text)
             
             # Log les résultats
             logger.info(f"Analyse terminée: {len(result.get('foods', []))} aliments détectés")
