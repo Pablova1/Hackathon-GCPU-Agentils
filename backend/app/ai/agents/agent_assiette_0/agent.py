@@ -1,16 +1,16 @@
 """
-Agent d'analyse de composition d'assiettes utilisant Google Gemini.
+Agent d'analyse de composition d'assiettes utilisant Google Gemini via Vertex AI.
 """
 
 import os
 import json
 import logging
-import requests
-import base64
 from typing import Dict, List, Optional, Union
 from pathlib import Path
 from dotenv import load_dotenv
 from PIL import Image
+from vertexai.generative_models import GenerativeModel, Part
+import vertexai
 
 
 # Configuration du logging
@@ -49,35 +49,43 @@ class FoodAnalyzerAgent:
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        project_id: Optional[str] = None,
+        location: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-001",
         load_env: bool = True
     ):
         """
         Initialise l'agent d'analyse alimentaire.
         
         Args:
-            api_key: Clé API Google Gemini (si None, charge depuis .env)
+            project_id: Google Cloud Project ID
+            location: Google Cloud Location (e.g., 'europe-west4')
             model_name: Nom du modèle Gemini à utiliser
             load_env: Si True, charge les variables d'environnement depuis .env
         """
         if load_env:
-            from pathlib import Path
             # Remonter 6 niveaux pour atteindre la racine du projet
             # agent.py -> agent_assiette_0 -> agents -> ai -> app -> backend -> PROJECT_ROOT
             env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        # Récupère la clé API
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
-        if not self.api_key:
+        # Configuration Vertex AI
+        self.project_id = project_id or os.getenv('GCP_PROJECT_ID')
+        self.location = location or os.getenv('GCP_LOCATION', 'us-central1')
+        
+        if not self.project_id:
             raise ValueError(
-                "Clé API manquante. Définis GOOGLE_API_KEY dans .env "
-                "ou passe api_key au constructeur."
+                "GCP_PROJECT_ID manquant. "
+                "Définissez GCP_PROJECT_ID dans .env"
             )
         
-        # Sauvegarde du nom du modèle
+        # Initialiser Vertex AI
+        vertexai.init(project=self.project_id, location=self.location)
         self.model_name = model_name
+        self.model = GenerativeModel(model_name)
+        
+        logger.info(f"FoodAnalyzerAgent initialisé avec le modèle {model_name} sur Vertex AI")
+        logger.info(f"Project: {self.project_id}, Location: {self.location}")
         
         logger.info(f"Agent initialisé avec le modèle {model_name}")
     
@@ -99,90 +107,45 @@ class FoodAnalyzerAgent:
             logger.error(f"Erreur lors du chargement de l'image: {e}")
             raise
     
-    def _image_to_base64(self, image_path: Union[str, Path]) -> str:
+    def _call_gemini_vision(self, prompt: str, image_path: Union[str, Path]) -> str:
         """
-        Convertit une image en base64.
-        
-        Args:
-            image_path: Chemin vers l'image
-            
-        Returns:
-            Image encodée en base64
-        """
-        try:
-            with open(image_path, 'rb') as image_file:
-                image_data = image_file.read()
-                encoded = base64.b64encode(image_data).decode('utf-8')
-                logger.info(f"Image encodée en base64: {len(encoded)} caractères")
-                return encoded
-        except Exception as e:
-            logger.error(f"Erreur lors de l'encodage de l'image: {e}")
-            raise
-    
-    def _call_gemini_api(self, prompt: str, image_base64: str, timeout: int = 30) -> str:
-        """
-        Appelle l'API Google Gemini avec une image.
+        Appelle Vertex AI Gemini avec une image.
         
         Args:
             prompt: Le prompt à envoyer
-            image_base64: Image encodée en base64
-            timeout: Timeout de la requête en secondes
+            image_path: Chemin vers l'image
             
         Returns:
             La réponse de l'IA
         """
-        # Utiliser gemini-2.0-flash-exp qui supporte les API keys
-        model_name = "gemini-2.0-flash-exp"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
-        
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inlineData": {
-                                "mimeType": "image/jpeg",
-                                "data": image_base64
-                            }
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 2048,
-                "topP": 0.9,
-                "topK": 40
-            }
-        }
-        
         try:
-            logger.debug(f"Appel API Gemini: {url}")
-            response = requests.post(url, json=payload, timeout=timeout)
-            response.raise_for_status()
+            # Charger l'image en bytes
+            with open(image_path, 'rb') as f:
+                image_bytes = f.read()
             
-            data = response.json()
+            # Créer un Part pour l'image à partir des bytes
+            image_part = Part.from_data(data=image_bytes, mime_type="image/jpeg")
             
-            # Extraire le texte de la réponse
-            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            logger.debug(f"Réponse API: {text[:100]}...")
+            # Générer la réponse
+            logger.debug(f"Appel Vertex AI Gemini avec l'image {image_path}")
+            response = self.model.generate_content(
+                [prompt, image_part],
+                generation_config={
+                    "temperature": 0.4,
+                    "max_output_tokens": 2048,
+                    "top_p": 0.9,
+                    "top_k": 40
+                }
+            )
+            
+            text = response.text.strip()
+            logger.debug(f"Réponse Vertex AI: {text[:100]}...")
             
             return text
             
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
-            raise Exception(f"Timeout de l'API Gemini après {timeout}s")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Erreur HTTP lors de l'appel à l'API Gemini: {e}")
-            if hasattr(e.response, 'text'):
-                logger.error(f"Réponse d'erreur: {e.response.text}")
-            raise Exception(f"Erreur API Gemini: {str(e)}")
-        except (KeyError, IndexError) as e:
-            logger.error(f"Format de réponse inattendu de l'API Gemini: {e}")
-            logger.error(f"Données reçues: {data}")
-            raise Exception(f"Format de réponse invalide: {str(e)}")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'appel à Vertex AI: {e}")
+            raise Exception(f"Erreur Vertex AI: {str(e)}")
     
     def _parse_response(self, response_text: str) -> Dict:
         """
@@ -245,15 +208,12 @@ class FoodAnalyzerAgent:
         """
         logger.info(f"Début de l'analyse de: {image_path}")
         
-        # Charge l'image et convertis en base64
-        image_base64 = self._image_to_base64(image_path)
-        
         # Utilise le prompt personnalisé ou le prompt par défaut
         prompt = custom_prompt or self.PROMPT_TEMPLATE
         
-        # Génère la réponse via l'API REST
+        # Génère la réponse via Vertex AI
         try:
-            response_text = self._call_gemini_api(prompt, image_base64)
+            response_text = self._call_gemini_vision(prompt, image_path)
             logger.info("Réponse reçue du modèle")
             
             # Parse la réponse

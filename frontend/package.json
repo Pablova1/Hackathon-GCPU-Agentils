@@ -1,8 +1,5 @@
 {
   "name": "frontend",
-  "lockfileVersion": 3,
-  "requires": true,
-  "packages": {},
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

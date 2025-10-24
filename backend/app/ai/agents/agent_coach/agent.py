@@ -10,7 +10,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-import google.generativeai as genai
+from vertexai.generative_models import GenerativeModel
+import vertexai
 from bson import ObjectId
 
 
@@ -31,8 +32,9 @@ class CoachAgent:
     def __init__(
         self,
         mongo_db,
-        api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        project_id: Optional[str] = None,
+        location: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-001",
         load_env: bool = True
     ):
         """
@@ -40,7 +42,8 @@ class CoachAgent:
         
         Args:
             mongo_db: Instance de la base MongoDB (Motor async)
-            api_key: Clé API Google Gemini
+            project_id: Google Cloud Project ID
+            location: Google Cloud Location (e.g., 'us-central1')
             model_name: Nom du modèle Gemini
             load_env: Si True, charge les variables d'environnement
         """
@@ -48,22 +51,24 @@ class CoachAgent:
         self.users_collection = mongo_db.user  # Collection 'user' au singulier
         self.workouts_collection = mongo_db.workouts  # Collection des entraînements
         
-        # Charger la clé API
+        # Charger les variables d'environnement
         if load_env:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self.project_id = project_id or os.getenv("GCP_PROJECT_ID")
+        self.location = location or os.getenv("GCP_LOCATION", "us-central1")
         
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY manquante dans .env")
+        if not self.project_id:
+            raise ValueError("GCP_PROJECT_ID manquant dans .env")
         
-        # Configurer Gemini
-        genai.configure(api_key=self.api_key)
+        # Initialiser Vertex AI
+        vertexai.init(project=self.project_id, location=self.location)
         self.model_name = model_name
-        self.model = genai.GenerativeModel(model_name)
+        self.model = GenerativeModel(model_name)
         
-        logger.info(f"CoachAgent initialisé avec le modèle {model_name}")
+        logger.info(f"CoachAgent initialisé avec le modèle {model_name} sur Vertex AI")
+        logger.info(f"Project: {self.project_id}, Location: {self.location}")
     
     async def get_user_fitness_context(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """

@@ -2,7 +2,7 @@
 Agent Orchestrateur - Combine les suggestions de nutrition, fitness et médicales.
 
 Prend les sorties du MealSuggestionAgent, du CoachAgent et du MedicalAgent,
-puis génère une suggestion holistique unifiée via Google Gemini.
+puis génère une suggestion holistique unifiée via Google Gemini sur Vertex AI.
 """
 
 import os
@@ -11,7 +11,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-import google.generativeai as genai
+from vertexai.generative_models import GenerativeModel
+import vertexai
 
 
 # Configuration du logging
@@ -30,34 +31,38 @@ class OrchestratorAgent:
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        project_id: Optional[str] = None,
+        location: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-001",
         load_env: bool = True
     ):
         """
         Initialise l'agent orchestrateur.
         
         Args:
-            api_key: Clé API Google Gemini
+            project_id: Google Cloud Project ID
+            location: Google Cloud Location (e.g., 'us-central1')
             model_name: Nom du modèle Gemini
             load_env: Si True, charge les variables d'environnement
         """
-        # Charger la clé API
+        # Charger les variables d'environnement
         if load_env:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self.project_id = project_id or os.getenv("GCP_PROJECT_ID")
+        self.location = location or os.getenv("GCP_LOCATION", "us-central1")
         
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY manquante dans .env")
+        if not self.project_id:
+            raise ValueError("GCP_PROJECT_ID manquant dans .env")
         
-        # Configurer Gemini
-        genai.configure(api_key=self.api_key)
+        # Initialiser Vertex AI
+        vertexai.init(project=self.project_id, location=self.location)
         self.model_name = model_name
-        self.model = genai.GenerativeModel(model_name)
+        self.model = GenerativeModel(model_name)
         
-        logger.info(f"OrchestratorAgent initialisé avec le modèle {model_name}")
+        logger.info(f"OrchestratorAgent initialisé avec le modèle {model_name} sur Vertex AI")
+        logger.info(f"Project: {self.project_id}, Location: {self.location}")
     
     def build_orchestration_prompt(
         self,

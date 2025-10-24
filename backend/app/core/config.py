@@ -34,9 +34,10 @@ class Settings:
     BASE_DIR: Path = BASE_DIR
     UPLOAD_DIR: Path = UPLOAD_DIR
     
-    # Google API
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    # Google Cloud / Vertex AI
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
+    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
     
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

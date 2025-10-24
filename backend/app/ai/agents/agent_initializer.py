@@ -33,6 +33,8 @@ def get_food_analyzer() -> FoodAnalyzerAgent:
     if _food_analyzer is None:
         try:
             _food_analyzer = FoodAnalyzerAgent(
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("FoodAnalyzerAgent initialisé")
@@ -51,6 +53,8 @@ def get_nutrient_analyzer() -> NutrientAnalyzerAgent:
     if _nutrient_analyzer is None:
         try:
             _nutrient_analyzer = NutrientAnalyzerAgent(
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("NutrientAnalyzerAgent initialisé")
@@ -84,9 +88,11 @@ def get_meal_suggestion_agent() -> MealSuggestionAgent:
     global _meal_suggestion_agent
     if _meal_suggestion_agent is None:
         try:
-            # Utiliser directement l'instance db asynchrone
+            # Utiliser directement l'instance db asynchrone avec Vertex AI
             _meal_suggestion_agent = MealSuggestionAgent(
                 mongo_db=db,
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("MealSuggestionAgent initialisé")
@@ -106,6 +112,8 @@ def get_coach_agent() -> CoachAgent:
         try:
             _coach_agent = CoachAgent(
                 mongo_db=db,
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("CoachAgent initialisé")
@@ -124,6 +132,8 @@ def get_orchestrator_agent() -> OrchestratorAgent:
     if _orchestrator_agent is None:
         try:
             _orchestrator_agent = OrchestratorAgent(
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("OrchestratorAgent initialisé")
@@ -143,6 +153,8 @@ def get_medical_agent() -> MedicalAgent:
         try:
             _medical_agent = MedicalAgent(
                 mongo_db=db,
+                project_id=settings.GCP_PROJECT_ID,
+                location=settings.GCP_LOCATION,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("MedicalAgent initialisé")

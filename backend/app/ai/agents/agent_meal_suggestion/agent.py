@@ -1,7 +1,7 @@
 """
 Agent de suggestions de repas personnalisées basé sur l'historique utilisateur.
 
-Utilise Google Gemini pour générer des recommandations alimentaires intelligentes
+Utilise Google Gemini sur Vertex AI pour générer des recommandations alimentaires intelligentes
 en analysant le profil utilisateur, ses objectifs de santé et son historique récent.
 """
 
@@ -11,7 +11,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-import google.generativeai as genai
+from vertexai.generative_models import GenerativeModel
+import vertexai
 from bson import ObjectId
 
 
@@ -36,8 +37,9 @@ class MealSuggestionAgent:
     def __init__(
         self,
         mongo_db,
-        api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        project_id: Optional[str] = None,
+        location: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-001",
         load_env: bool = True
     ):
         """
@@ -45,7 +47,8 @@ class MealSuggestionAgent:
         
         Args:
             mongo_db: Instance de la base MongoDB
-            api_key: Clé API Google Gemini (si None, charge depuis .env)
+            project_id: Google Cloud Project ID
+            location: Google Cloud Location (e.g., 'us-central1')
             model_name: Nom du modèle Gemini à utiliser
             load_env: Si True, charge les variables d'environnement depuis .env
         """
@@ -60,19 +63,23 @@ class MealSuggestionAgent:
         self.users_collection = mongo_db.get_collection("user")
         self.meals_collection = mongo_db.get_collection("meals")
         
-        # Configuration de l'API Gemini
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
-        if not self.api_key:
+        # Configuration Vertex AI
+        self.project_id = project_id or os.getenv('GCP_PROJECT_ID')
+        self.location = location or os.getenv('GCP_LOCATION', 'us-central1')
+        
+        if not self.project_id:
             raise ValueError(
-                "Clé API Gemini manquante. "
-                "Définissez GOOGLE_API_KEY ou GEMINI_API_KEY dans .env"
+                "GCP_PROJECT_ID manquant. "
+                "Définissez GCP_PROJECT_ID dans .env"
             )
         
-        genai.configure(api_key=self.api_key)
+        # Initialiser Vertex AI
+        vertexai.init(project=self.project_id, location=self.location)
         self.model_name = model_name
-        self.model = genai.GenerativeModel(model_name)
+        self.model = GenerativeModel(model_name)
         
-        logger.info(f"MealSuggestionAgent initialisé avec le modèle {model_name}")
+        logger.info(f"MealSuggestionAgent initialisé avec le modèle {model_name} sur Vertex AI")
+        logger.info(f"Project: {self.project_id}, Location: {self.location}")
     
     async def get_user_context(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """
