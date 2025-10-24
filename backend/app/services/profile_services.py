@@ -14,7 +14,7 @@ async def save_user_profile(data: UserDocument) -> str:
 
     # Ajouter la date de création si absente
     if not data.createdAt:
-        data.createdAt = datetime.utcnow()
+        data.createdAt = datetime.now()
 
     # Convertir le modèle Pydantic en dictionnaire Mongo-compatible
     # by_alias=True → garde le nom "_id" si défini

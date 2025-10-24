@@ -1,0 +1,20 @@
+# Backend
+backend
+requirements.txt
+
+# Git
+.git
+.gitignore
+.github
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Misc
+.env
+.env.local
+*.md
+
+# Build files (except for first build)
+.cache
