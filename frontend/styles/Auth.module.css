@@ -1,44 +1,135 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Quicksand', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background 0.5s ease;
+  position: relative;
+}
+
+.logoContainer {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 40px;
+  margin-top: 20px;
+  animation: fadeIn 0.8s ease;
+  width: 100%;
+  max-width: 200px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Effet grain/texture très visible sur le fond */
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.65;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Fond blanc pour l'inscription (register) */
+.container[data-tab="register"] {
+  background: #ffffff;
+}
+
+.container[data-tab="register"]::before {
+  opacity: 0.85;
+}
+
+/* Fond vert uni et plus clair pour la connexion (login) */
+.container[data-tab="login"] {
+  background: #66BB6A;
+}
+
+.container[data-tab="login"]::before {
+  opacity: 0.65;
 }
 
 .card {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 400px;
+  border-radius: 30px 30px 20px 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  max-width: 420px;
   width: 100%;
   overflow: hidden;
+  transition: all 0.5s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Card blanche pour register */
+.card[data-tab="register"] {
+  background: #ffffff;
+  border: none;
+}
+
+/* Card verte pour login */
+.card[data-tab="login"] {
+  background: #ffffff;
+  border: none;
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 30px;
+  padding: 30px 30px 20px;
   text-align: center;
+  border-radius: 27px 27px 0 0;
+  transition: all 0.5s ease;
+}
+
+/* Header vert pour register */
+.header[data-tab="register"] {
+  background: #66BB6A;
+  color: white;
+}
+
+/* Header blanc pour login */
+.header[data-tab="login"] {
+  background: #ffffff;
+  color: #43A047;
 }
 
 .header h1 {
-  font-size: 28px;
+  font-size: 32px;
   margin-bottom: 10px;
   margin-top: 0;
+  font-weight: 800;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .header p {
   opacity: 0.9;
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
+  font-weight: 500;
+  font-family: 'Quicksand', sans-serif;
 }
 
 .tabs {
   display: flex;
-  background: #f5f5f5;
+  background: transparent;
+  padding: 0 15px;
+  gap: 10px;
+  margin-bottom: 20px;
+  margin-top: -10px;
 }
 
 .tab {
@@ -46,22 +137,46 @@
   padding: 15px;
   text-align: center;
   cursor: pointer;
-  background: #f5f5f5;
   border: none;
   font-size: 16px;
   font-weight: 600;
-  color: #666;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border-radius: 12px;
 }
 
-.tab.active {
-  background: white;
-  color: #667eea;
-  border-bottom: 3px solid #667eea;
+/* Quand on est sur register (fond blanc de la page) */
+.tabs[data-tab="register"] .tab {
+  background: #ffffff;
+  color: #666;
+  border: none;
+}
+
+.tabs[data-tab="register"] .tab.active {
+  background: #66BB6A;
+  color: white;
+  transform: scale(1.05);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+}
+
+/* Quand on est sur login (fond vert de la page) */
+.tabs[data-tab="login"] .tab {
+  background: #ffffff;
+  color: #666;
+  border: none;
+}
+
+.tabs[data-tab="login"] .tab.active {
+  background: #43A047;
+  color: white;
+  transform: scale(1.05);
+  border: none;
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.5);
 }
 
 .tab:hover {
-  background: #ebebeb;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .formContainer {
@@ -80,42 +195,97 @@
 .formGroup label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
+  transition: color 0.3s;
+}
+
+/* Labels verts pour register */
+.formGroup[data-tab="register"] label {
+  color: #2E7D32;
+}
+
+/* Labels blancs pour login */
+.formGroup[data-tab="login"] label {
+  color: #2E7D32;
 }
 
 .formGroup input {
   width: 100%;
-  padding: 12px 15px;
+  padding: 14px 16px;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.3s;
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
   box-sizing: border-box;
+  background: white;
 }
 
-.formGroup input:focus {
+/* Inputs pour register */
+.formGroup[data-tab="register"] input {
+  border-color: #4CAF50;
+  color: #333;
+}
+
+.formGroup[data-tab="register"] input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #2E7D32;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Inputs pour login */
+.formGroup[data-tab="login"] input {
+  border-color: #4CAF50;
+  color: #333;
+}
+
+.formGroup[data-tab="login"] input:focus {
+  outline: none;
+  border-color: #2E7D32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+}
+
+.formGroup input::placeholder {
+  color: #999;
 }
 
 .submitButton {
   width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 16px;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.submitButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+/* Bouton pour register (vert uni sans bordure) */
+.submitButton[data-tab="register"] {
+  background: #66BB6A;
+  color: white;
+  border: none;
+}
+
+.submitButton[data-tab="register"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+}
+
+/* Bouton pour login (blanc avec bordure verte) */
+.submitButton[data-tab="login"] {
+  background: white;
+  color: #2E7D32;
+  border: 3px solid #66BB6A;
+}
+
+.submitButton[data-tab="login"]:hover {
+  background: #66BB6A;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.3);
 }
 
 .submitButton:active {
@@ -123,49 +293,83 @@
 }
 
 .submitButton:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .successMessage {
-  background: #4caf50;
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
   color: white;
-  padding: 15px;
-  border-radius: 8px;
+  padding: 16px 20px;
+  border-radius: 12px;
   margin-bottom: 20px;
   text-align: center;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .errorMessage {
-  background: #f44336;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
   color: white;
-  padding: 15px;
-  border-radius: 8px;
+  padding: 16px 20px;
+  border-radius: 12px;
   margin-bottom: 20px;
   text-align: center;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
 .loading {
   text-align: center;
-  padding: 20px;
+  padding: 30px 20px;
 }
 
 .loading p {
-  margin-top: 10px;
-  color: #666;
+  margin-top: 15px;
+  color: #2E7D32;
+  font-weight: 600;
 }
 
 .spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
+  border: 4px solid #e8f5e9;
+  border-top: 4px solid #4CAF50;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
+  width: 50px;
+  height: 50px;
+  animation: spin 0.8s linear infinite;
   margin: 0 auto;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Responsive mobile */
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .card {
+    max-width: 100%;
+    border-radius: 25px 25px 15px 15px;
+  }
+  
+  .header {
+    padding: 25px 20px 15px;
+  }
+  
+  .header h1 {
+    font-size: 24px;
+  }
+  
+  .formContainer {
+    padding: 20px;
+  }
+  
+  .tabs {
+    padding: 0 10px;
+  }
 }

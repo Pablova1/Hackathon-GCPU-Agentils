@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import styles from '../styles/Auth.module.css';
 
 export default function Auth() {
@@ -156,14 +157,26 @@ export default function Auth() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <h1>🍽️ Nutrition App</h1>
-          <p>Commencez votre parcours santé</p>
+    <div className={styles.container} data-tab={activeTab}>
+      {activeTab === 'register' && (
+        <div className={styles.logoContainer}>
+          <Image 
+            src="/logo-4.png" 
+            alt="MY PLATE Logo" 
+            width={200}
+            height={200}
+            priority
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+      )}
+      <div className={styles.card} data-tab={activeTab}>
+        <div className={styles.header} data-tab={activeTab}>
+          <h1>MY PLATE</h1>
+          <p>{activeTab === 'register' ? 'Créez votre compte' : 'Bon retour parmi nous !'}</p>
         </div>
 
-        <div className={styles.tabs}>
+        <div className={styles.tabs} data-tab={activeTab}>
           <button 
             className={`${styles.tab} ${activeTab === 'login' ? styles.active : ''}`}
             onClick={() => setActiveTab('login')}
@@ -202,7 +215,7 @@ export default function Auth() {
           {/* Formulaire de connexion */}
           {activeTab === 'login' && !loading && (
             <form onSubmit={handleLogin} className={styles.form}>
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="loginEmail">Email</label>
                 <input
                   type="email"
@@ -214,7 +227,7 @@ export default function Auth() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="loginPassword">Mot de passe</label>
                 <input
                   type="password"
@@ -226,7 +239,7 @@ export default function Auth() {
                 />
               </div>
 
-              <button type="submit" className={styles.submitButton}>
+              <button type="submit" className={styles.submitButton} data-tab={activeTab}>
                 Se connecter
               </button>
             </form>
@@ -235,7 +248,7 @@ export default function Auth() {
           {/* Formulaire d'inscription */}
           {activeTab === 'register' && !loading && (
             <form onSubmit={handleRegister} className={styles.form}>
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="registerFirstName">Prénom</label>
                 <input
                   type="text"
@@ -249,7 +262,7 @@ export default function Auth() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="registerLastName">Nom</label>
                 <input
                   type="text"
@@ -263,7 +276,7 @@ export default function Auth() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="registerEmail">Email</label>
                 <input
                   type="email"
@@ -275,7 +288,7 @@ export default function Auth() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="registerPassword">Mot de passe</label>
                 <input
                   type="password"
@@ -288,7 +301,7 @@ export default function Auth() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} data-tab={activeTab}>
                 <label htmlFor="registerPasswordConfirm">Confirmer le mot de passe</label>
                 <input
                   type="password"
@@ -300,7 +313,7 @@ export default function Auth() {
                 />
               </div>
 
-              <button type="submit" className={styles.submitButton}>
+              <button type="submit" className={styles.submitButton} data-tab={activeTab}>
                 S'inscrire
               </button>
             </form>

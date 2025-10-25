@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import Image from 'next/image';
 
-export default function CircularText({ text = "MY*PLATE*", spinDuration = 10, onHover = "speedUp" }) {
+export default function CircularText({ text = "MY*PLATE*", spinDuration = 10, onHover = "speedUp", showLogo = true }) {
   const [isHovered, setIsHovered] = useState(false);
   
   const chars = text.split('');
@@ -17,17 +16,6 @@ export default function CircularText({ text = "MY*PLATE*", spinDuration = 10, on
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Logo au centre */}
-      <div className="logo-center">
-        <Image 
-          src="/Logo-2.png" 
-          alt="MyPlate Logo" 
-          width={160} 
-          height={160}
-          priority
-        />
-      </div>
-
       {/* Texte circulaire qui tourne */}
       <div className="circular-text-container">
         {chars.map((char, index) => (
@@ -49,14 +37,6 @@ export default function CircularText({ text = "MY*PLATE*", spinDuration = 10, on
           width: 280px;
           height: 280px;
           margin: 0 auto;
-        }
-
-        .logo-center {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          z-index: 5;
         }
 
         .circular-text-container {
