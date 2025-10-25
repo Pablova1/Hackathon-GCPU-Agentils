@@ -1,0 +1,126 @@
+.container {
+  min-height: 100vh;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2.5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Header avec Bienvenue */
+.welcomeHeader {
+  width: 100%;
+  max-width: 500px;
+  z-index: 10;
+}
+
+.welcomeText {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #000;
+  text-align: center;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+/* Section centrale avec CircularText */
+.centerSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 2rem 0;
+}
+
+/* Section des boutons en bas */
+.buttonSection {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.authButton {
+  flex: 1;
+  padding: 1.125rem 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+  background: #000;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  letter-spacing: 0.3px;
+}
+
+.authButton:hover {
+  background: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.authButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Effet subtil d'ombre sur les boutons */
+.authButton:first-child {
+  background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+}
+
+.authButton:last-child {
+  background: white;
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.authButton:last-child:hover {
+  background: #f5f5f5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive pour petits écrans */
+@media (max-width: 375px) {
+  .container {
+    padding: 2rem 1.25rem;
+  }
+
+  .welcomeText {
+    font-size: 1.875rem;
+  }
+
+  .buttonSection {
+    flex-direction: column;
+    max-width: 400px;
+  }
+
+  .authButton {
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Responsive pour grands écrans */
+@media (min-width: 768px) {
+  .container {
+    padding: 3.5rem 2rem;
+  }
+
+  .welcomeText {
+    font-size: 2.75rem;
+  }
+
+  .authButton {
+    font-size: 1.25rem;
+  }
+}
