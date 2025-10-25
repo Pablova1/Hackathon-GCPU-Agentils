@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import TrueFocus from '../components/TrueFocus';
@@ -7,11 +7,45 @@ import styles from '../styles/PageAccueil.module.css';
 export default function PageAccueil() {
   const router = useRouter();
   const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
-  const handleScanClick = () => {
+  const handleScanClick = async () => {
     setShowCamera(true);
-    // Logique pour accéder à la caméra
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Caméra arrière sur mobile
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Erreur accès caméra:', err);
+      alert('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+      setShowCamera(false);
+    }
   };
+
+  const handleCloseCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setShowCamera(false);
+  };
+
+  // Nettoyage quand le composant est démonté
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const handleMenuClick = () => {
     // Navigation vers menu/historique
@@ -82,7 +116,12 @@ export default function PageAccueil() {
           </div>
         ) : (
           <div className={styles.cameraView}>
-            <video className={styles.video} autoPlay playsInline></video>
+            <video 
+              ref={videoRef}
+              className={styles.video} 
+              autoPlay 
+              playsInline
+            ></video>
             <div className={styles.scanOverlay}>
               <div className={styles.focusFrame}>
                 <span className={styles.corner + ' ' + styles.topLeft}></span>
@@ -90,6 +129,12 @@ export default function PageAccueil() {
                 <span className={styles.corner + ' ' + styles.bottomLeft}></span>
                 <span className={styles.corner + ' ' + styles.bottomRight}></span>
               </div>
+              <button className={styles.closeCamera} onClick={handleCloseCamera}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
           </div>
         )}
