@@ -67,6 +67,16 @@ async def submit_all_answers(request: AllAnswersRequest):
         # Récupérer le prénom et nom depuis le profil existant
         first_name = existing_user.get("profile", {}).get("firstName", "")
         last_name = existing_user.get("profile", {}).get("lastName", "")
+        email = existing_user.get("auth", {}).get("email", "")
+        
+        logger.info(f"Données utilisateur récupérées - firstName: {first_name}, lastName: {last_name}, email: {email}")
+        logger.debug(f"Structure utilisateur: {existing_user}")
+        
+        if not email:
+            logger.warning("Email non trouvé dans auth.email, tentative avec d'autres emplacements")
+            # Essayer d'autres emplacements possibles
+            email = existing_user.get("email") or existing_user.get("profile", {}).get("email", "")
+            logger.info(f"Email récupéré depuis autre emplacement: {email}")
         
         # Créer une session
         session = await create_session(request.user_id)
@@ -90,12 +100,18 @@ async def submit_all_answers(request: AllAnswersRequest):
         complete_answers = dict(request.answers)
         complete_answers["firstName"] = first_name
         complete_answers["lastName"] = last_name
+        complete_answers["email"] = email
+        
+        logger.debug(f"complete_answers avec email: {complete_answers}")
         
         # Enregistrer toutes les réponses dans la session
         await update_session(session_id, {"slots": complete_answers})
         
         # Mapper les réponses vers le format complet du profil
         mapped = map_minimal_slots_to_full_profile(complete_answers)
+        
+        logger.info(f"Profil mappé - email: {mapped.get('email')}")
+        logger.debug(f"Profil complet mappé: {mapped}")
         
         # Mettre à jour l'utilisateur existant avec les nouvelles informations
         update_data = {
@@ -120,16 +136,38 @@ async def submit_all_answers(request: AllAnswersRequest):
         
         # Mettre à jour la session
         await update_session(session_id, {
-            "state": "COMPLETED"
+            "state": "AI_QUESTIONS"  # Pas encore complété, on va poser des questions IA
         })
         
         logger.info(f"Profil complété avec succès pour l'utilisateur {request.user_id}")
+        
+        # Générer une question IA de suivi
+        logger.info(f"Tentative de génération d'une question IA pour l'utilisateur {request.user_id}")
+        logger.debug(f"Slots pour l'IA: {complete_answers}")
+        
+        ai_question = None
+        try:
+            ai_question = suggest_followup(complete_answers, 0)
+            logger.info(f"Question IA générée: {ai_question}")
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération de la question IA: {e}", exc_info=True)
+        
+        if ai_question:
+            # Stocker la question IA dans la session
+            await update_session(session_id, {
+                "asked_ai_count": 1,
+                "last_ai_questions": {ai_question["slot"]: ai_question["text"]}
+            })
+            logger.info(f"Question IA stockée dans la session: {ai_question['slot']}")
+        else:
+            logger.info("Aucune question IA n'a été générée")
         
         return {
             "success": True,
             "message": "Profil complété avec succès",
             "session_id": session_id,
-            "profile_completed": True
+            "profile_completed": True,
+            "ai_question": ai_question  # Inclure la question IA dans la réponse
         }
         
     except HTTPException:
@@ -270,6 +308,12 @@ def validate_answer(slot: str, value) -> bool:
         except:
             return False
     elif qtype == "single_choice":
+        # Gérer la sélection multiple pour dietType
+        if slot == "dietType" and isinstance(value, str) and "," in value:
+            # Valider chaque choix séparément
+            choices = [c.strip() for c in value.split(",")]
+            valid_choices = q.get("choices", [])
+            return all(choice in valid_choices for choice in choices)
         return value in q.get("choices", [])
     
     return True  # text : tout est accepté
@@ -400,6 +444,7 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
         # ProfileCore
         "firstName": regular_slots.get("firstName", ""),
         "lastName": regular_slots.get("lastName", ""),
+        "email": regular_slots.get("email", ""),
         "age": age,
         "gender": regular_slots.get("gender", "Other"),
         "weight_kg": float(regular_slots.get("weightKg", 0)) if regular_slots.get("weightKg") else 0.0,

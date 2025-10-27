@@ -11,6 +11,11 @@ export default function Onboarding() {
   const [success, setSuccess] = useState('');
   const [userId, setUserId] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [sessionId, setSessionId] = useState(null);
+  const [aiQuestions, setAiQuestions] = useState([]);
+  const [aiAnswers, setAiAnswers] = useState({});
+  const [showAiQuestions, setShowAiQuestions] = useState(false);
+  const [aiSubmitting, setAiSubmitting] = useState(false);
 
   // Vérifier l'authentification et charger les questions
   useEffect(() => {
@@ -137,11 +142,27 @@ export default function Onboarding() {
 
       const data = await response.json();
 
+      console.log('Réponse du backend:', data);
+
       if (response.ok) {
-        setSuccess('Profil complété avec succès ! Redirection...');
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
+        setSessionId(data.session_id);
+        
+        // Vérifier s'il y a une question IA
+        if (data.ai_question) {
+          console.log('Question IA reçue:', data.ai_question);
+          setAiQuestions([data.ai_question]);
+          setAiAnswers({ [data.ai_question.slot]: '' });
+          setSuccess('Profil complété ! Quelques questions supplémentaires pour mieux te connaître...');
+          setShowAiQuestions(true);
+          setSubmitting(false);
+        } else {
+          console.log('Pas de question IA, redirection...');
+          // Pas de questions IA, rediriger directement
+          setSuccess('Profil complété avec succès ! Redirection...');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+        }
       } else {
         setError(data.detail || 'Erreur lors de la soumission du profil');
         setSubmitting(false);
@@ -152,26 +173,179 @@ export default function Onboarding() {
     }
   };
 
+  const handleAiAnswerChange = (slot, value) => {
+    setAiAnswers(prev => ({
+      ...prev,
+      [slot]: value
+    }));
+  };
+
+  const handleAiSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setAiSubmitting(true);
+
+    const currentQuestion = aiQuestions[0];
+    const answer = aiAnswers[currentQuestion.slot];
+
+    if (!answer || answer === '') {
+      setError('Veuillez répondre à la question');
+      setAiSubmitting(false);
+      return;
+    }
+
+    try {
+      // Soumettre la réponse IA
+      const response = await fetch('http://localhost:8000/api/onboarding/answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          slot: currentQuestion.slot,
+          value: answer
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.finished) {
+          // Toutes les questions sont terminées
+          setSuccess('Profil complété avec succès ! Redirection...');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+        } else if (data.next_question) {
+          // Il y a une autre question IA
+          setAiQuestions([data.next_question]);
+          setAiAnswers({ [data.next_question.slot]: '' });
+          setAiSubmitting(false);
+        } else {
+          // Pas de prochaine question, terminer
+          setSuccess('Profil complété avec succès ! Redirection...');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+        }
+      } else {
+        setError(data.detail || 'Erreur lors de la soumission');
+        setAiSubmitting(false);
+      }
+    } catch (err) {
+      setError('Erreur de connexion au serveur');
+      setAiSubmitting(false);
+    }
+  };
+
+  const skipAiQuestions = () => {
+    setSuccess('Profil complété avec succès ! Redirection...');
+    setTimeout(() => {
+      router.push('/');
+    }, 2000);
+  };
+
+  // Descriptions des morphologies
+  const morphologyDescriptions = {
+    'ectomorphic': {
+      emoji: '🏃',
+      description: 'Corps naturellement mince avec un métabolisme rapide. Difficulté à prendre du poids et de la masse musculaire.',
+      characteristics: ['Métabolisme rapide', 'Silhouette élancée', 'Peu de masse grasse']
+    },
+    'mesomorphic': {
+      emoji: '💪',
+      description: 'Corps athlétique et musclé naturellement. Gains musculaires et perte de graisse relativement faciles.',
+      characteristics: ['Développement musculaire facile', 'Corps athlétique', 'Métabolisme équilibré']
+    },
+    'endomorphic': {
+      emoji: '🏋️',
+      description: 'Corps qui stocke facilement la graisse. Métabolisme plus lent mais bon potentiel de force.',
+      characteristics: ['Facilité à prendre du poids', 'Métabolisme lent', 'Bonne force naturelle']
+    },
+    'unknown': {
+      emoji: '❓',
+      description: 'Tu ne connais pas ton type de morphologie ? Pas de problème, nous t\'aiderons à l\'identifier !',
+      characteristics: ['Évaluation personnalisée', 'Conseils adaptés', 'Suivi progressif']
+    }
+  };
+
   const renderQuestionInput = (question) => {
     const value = answers[question.slot] || '';
+    const isMorphologyQuestion = question.slot === 'bodyType';
+    const isDietQuestion = question.slot === 'dietType';
+
+    // Gérer la sélection multiple pour dietType
+    const handleMultipleChoice = (choice) => {
+      const currentValues = value ? value.split(',').map(v => v.trim()) : [];
+      let newValues;
+      
+      if (currentValues.includes(choice)) {
+        // Désélectionner
+        newValues = currentValues.filter(v => v !== choice);
+      } else {
+        // Sélectionner
+        newValues = [...currentValues, choice];
+      }
+      
+      handleAnswerChange(question.slot, newValues.join(','));
+    };
+
+    const isChoiceSelected = (choice) => {
+      if (!isDietQuestion) return value === choice;
+      const currentValues = value ? value.split(',').map(v => v.trim()) : [];
+      return currentValues.includes(choice);
+    };
 
     switch (question.type) {
       case 'single_choice':
         return (
-          <div style={styles.choicesContainer}>
-            {question.choices.map((choice) => (
-              <button
-                key={choice}
-                type="button"
-                onClick={() => handleAnswerChange(question.slot, choice)}
-                style={{
-                  ...styles.choiceButton,
-                  ...(value === choice ? styles.choiceButtonSelected : {})
-                }}
-              >
-                {choice}
-              </button>
-            ))}
+          <div>
+            {isDietQuestion && (
+              <p style={styles.multiSelectHint}>💡 Tu peux sélectionner plusieurs régimes</p>
+            )}
+            <div style={styles.choicesContainer}>
+              {question.choices.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  onClick={(e) => {
+                    if (isDietQuestion) {
+                      handleMultipleChoice(choice);
+                    } else {
+                      handleAnswerChange(question.slot, choice);
+                    }
+                    e.target.blur(); // Retire le focus après le clic
+                  }}
+                  style={{
+                    ...styles.choiceButton,
+                    ...(isChoiceSelected(choice) ? styles.choiceButtonSelected : {})
+                  }}
+                >
+                  {isMorphologyQuestion && morphologyDescriptions[choice] && (
+                    <span style={styles.choiceEmoji}>{morphologyDescriptions[choice].emoji} </span>
+                  )}
+                  {choice}
+                </button>
+              ))}
+            </div>
+            
+            {isMorphologyQuestion && value && morphologyDescriptions[value] && (
+              <div style={styles.morphologyInfo}>
+                <div style={styles.morphologyHeader}>
+                  <span style={styles.morphologyEmoji}>{morphologyDescriptions[value].emoji}</span>
+                  <strong>{value}</strong>
+                </div>
+                <p style={styles.morphologyDescription}>
+                  {morphologyDescriptions[value].description}
+                </p>
+                <ul style={styles.characteristicsList}>
+                  {morphologyDescriptions[value].characteristics.map((char, idx) => (
+                    <li key={idx} style={styles.characteristicItem}>✓ {char}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
 
@@ -228,6 +402,17 @@ export default function Onboarding() {
 
   return (
     <div style={styles.container}>
+      <style jsx>{`
+        button:focus {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+      `}</style>
+      
       <div style={styles.card}>
         <h1 style={styles.title}>🍽️ Complète ton profil</h1>
         
@@ -247,26 +432,75 @@ export default function Onboarding() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {questions.map((question, index) => (
-            <div key={question.slot} style={styles.questionBlock}>
-              <label style={styles.questionLabel}>
-                <span style={styles.questionNumber}>{index + 1}.</span>
-                {question.text}
-                {question.required && <span style={styles.required}> *</span>}
-              </label>
-              {renderQuestionInput(question)}
-            </div>
-          ))}
+        {!showAiQuestions ? (
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {questions.map((question, index) => (
+              <div key={question.slot} style={styles.questionBlock}>
+                <label style={styles.questionLabel}>
+                  <span style={styles.questionNumber}>{index + 1}.</span>
+                  {question.text}
+                  {question.required && <span style={styles.required}> *</span>}
+                </label>
+                {renderQuestionInput(question)}
+              </div>
+            ))}
 
-          <button 
-            type="submit" 
-            style={styles.submitButton}
-            disabled={submitting}
-          >
-            {submitting ? 'Envoi en cours...' : 'Valider mon profil ✨'}
-          </button>
-        </form>
+            <button 
+              type="submit" 
+              style={styles.submitButton}
+              disabled={submitting}
+            >
+              {submitting ? 'Envoi en cours...' : 'Valider mon profil ✨'}
+            </button>
+          </form>
+        ) : (
+          <div style={styles.aiSection}>
+            <div style={styles.aiHeader}>
+              <h2 style={styles.aiTitle}>🤖 Questions personnalisées par IA</h2>
+              <p style={styles.aiSubtitle}>
+                Notre IA a généré quelques questions pour mieux comprendre tes besoins
+              </p>
+            </div>
+
+            {aiQuestions.length > 0 && (
+              <form onSubmit={handleAiSubmit} style={styles.form}>
+                {aiQuestions.map((question, index) => (
+                  <div key={question.slot} style={styles.aiQuestionBlock}>
+                    <label style={styles.questionLabel}>
+                      <span style={styles.aiQuestionIcon}>🤖</span>
+                      {question.text}
+                    </label>
+                    <textarea
+                      value={aiAnswers[question.slot] || ''}
+                      onChange={(e) => handleAiAnswerChange(question.slot, e.target.value)}
+                      style={styles.textarea}
+                      placeholder="Partage-nous tes préférences..."
+                      rows={4}
+                    />
+                  </div>
+                ))}
+
+                <div style={styles.aiButtonsContainer}>
+                  <button 
+                    type="submit" 
+                    style={styles.submitButton}
+                    disabled={aiSubmitting}
+                  >
+                    {aiSubmitting ? 'Envoi en cours...' : 'Répondre 💬'}
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={skipAiQuestions}
+                    style={styles.skipButton}
+                  >
+                    Passer cette étape →
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -341,16 +575,61 @@ const styles = {
     border: '2px solid #ddd',
     borderRadius: '8px',
     backgroundColor: 'white',
+    color: '#555',
     cursor: 'pointer',
     fontSize: '15px',
     transition: 'all 0.2s',
     textAlign: 'center',
-    fontWeight: '500'
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    outline: 'none'
+  },
+  choiceEmoji: {
+    fontSize: '20px',
+    marginRight: '5px'
   },
   choiceButtonSelected: {
     borderColor: '#4CAF50',
     backgroundColor: '#e8f5e9',
     color: '#2e7d32'
+  },
+  morphologyInfo: {
+    marginTop: '15px',
+    padding: '20px',
+    backgroundColor: '#f0f7ff',
+    borderRadius: '10px',
+    border: '2px solid #2196F3',
+    animation: 'fadeIn 0.3s ease-in'
+  },
+  morphologyHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '10px',
+    fontSize: '18px',
+    color: '#1976D2'
+  },
+  morphologyEmoji: {
+    fontSize: '24px'
+  },
+  morphologyDescription: {
+    margin: '10px 0',
+    color: '#555',
+    fontSize: '15px',
+    lineHeight: '1.5'
+  },
+  characteristicsList: {
+    listStyle: 'none',
+    padding: '0',
+    margin: '10px 0 0 0'
+  },
+  characteristicItem: {
+    padding: '5px 0',
+    color: '#2e7d32',
+    fontSize: '14px',
+    fontWeight: '500'
   },
   input: {
     padding: '12px 15px',
@@ -358,6 +637,16 @@ const styles = {
     borderRadius: '8px',
     fontSize: '16px',
     transition: 'border-color 0.2s'
+  },
+  textarea: {
+    padding: '12px 15px',
+    border: '2px solid #ddd',
+    borderRadius: '8px',
+    fontSize: '16px',
+    transition: 'border-color 0.2s',
+    fontFamily: 'inherit',
+    resize: 'vertical',
+    minHeight: '100px'
   },
   submitButton: {
     marginTop: '20px',
@@ -370,6 +659,65 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 'bold',
     transition: 'background-color 0.2s'
+  },
+  skipButton: {
+    marginTop: '10px',
+    padding: '12px',
+    backgroundColor: 'transparent',
+    color: '#666',
+    border: '2px solid #ddd',
+    borderRadius: '8px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    transition: 'all 0.2s'
+  },
+  aiSection: {
+    marginTop: '20px'
+  },
+  aiHeader: {
+    textAlign: 'center',
+    marginBottom: '30px',
+    padding: '20px',
+    backgroundColor: '#f0f4ff',
+    borderRadius: '10px',
+    border: '2px solid #2196F3'
+  },
+  aiTitle: {
+    color: '#1976D2',
+    fontSize: '22px',
+    marginBottom: '10px'
+  },
+  aiSubtitle: {
+    color: '#666',
+    fontSize: '15px',
+    margin: '0'
+  },
+  aiQuestionBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    padding: '20px',
+    backgroundColor: '#fafafa',
+    borderRadius: '10px',
+    border: '2px solid #e0e0e0'
+  },
+  aiQuestionIcon: {
+    fontSize: '20px',
+    marginRight: '8px'
+  },
+  aiButtonsContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+  multiSelectHint: {
+    fontSize: '14px',
+    color: '#2196F3',
+    fontStyle: 'italic',
+    marginBottom: '10px',
+    textAlign: 'center',
+    fontWeight: '500'
   },
   errorMessage: {
     padding: '15px',

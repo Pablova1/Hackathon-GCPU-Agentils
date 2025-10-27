@@ -147,7 +147,7 @@ class OnboardingAgent:
     
     def _call_gemini_api(self, prompt: str, timeout: int = 20) -> Optional[str]:
         """
-        Appelle l'API Google Gemini (generativelanguage).
+        Appelle l'API Vertex AI Gemini.
         
         Args:
             prompt: Le prompt à envoyer à l'API
@@ -156,28 +156,44 @@ class OnboardingAgent:
         Returns:
             La réponse de l'IA ou None en cas d'erreur
         """
-        # Utiliser l'API Google AI (generativelanguage) au lieu de Vertex AI
-        # Cette API fonctionne avec juste une clé API, sans OAuth2
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={self.api_key}"
-        
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": prompt}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 200,
-                "topP": 0.9,
-                "topK": 40
-            }
-        }
-        
+        # Utiliser Vertex AI
         try:
-            logger.debug(f"Appel API Gemini: {url}")
-            response = requests.post(url, json=payload, timeout=timeout)
+            from google.auth import default
+            from google.auth.transport.requests import Request
+            
+            # Obtenir les credentials par défaut (utilise GOOGLE_APPLICATION_CREDENTIALS ou gcloud auth)
+            credentials, _ = default()
+            
+            # Rafraîchir le token si nécessaire
+            if not credentials.valid:
+                credentials.refresh(Request())
+            
+            # Construire l'URL Vertex AI
+            model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-001')
+            url = f"https://{self.region}-aiplatform.googleapis.com/v1/projects/{self.project_id}/locations/{self.region}/publishers/google/models/{model}:generateContent"
+            
+            payload = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": prompt}]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 200,
+                    "topP": 0.9,
+                    "topK": 40
+                }
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {credentials.token}",
+                "Content-Type": "application/json"
+            }
+            
+            logger.debug(f"Appel API Vertex AI: {url}")
+            response = requests.post(url, json=payload, headers=headers, timeout=timeout)
             response.raise_for_status()
             
             data = response.json()
@@ -188,15 +204,20 @@ class OnboardingAgent:
             
             return text
             
+        except ImportError:
+            logger.error("Bibliothèque google-auth non installée. Installez-la avec: pip install google-auth")
+            return None
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
+            logger.error(f"Timeout lors de l'appel à l'API Vertex AI (>{timeout}s)")
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erreur HTTP lors de l'appel à l'API Gemini: {e}")
+            logger.error(f"Erreur HTTP lors de l'appel à l'API Vertex AI: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Réponse: {e.response.text}")
             return None
         except (KeyError, IndexError) as e:
-            logger.error(f"Format de réponse inattendu de l'API Gemini: {e}")
-            logger.debug(f"Données reçues: {data}")
+            logger.error(f"Format de réponse inattendu de l'API Vertex AI: {e}")
+            logger.debug(f"Données reçues: {data if 'data' in locals() else 'N/A'}")
             return None
         except Exception as e:
             logger.error(f"Erreur inattendue lors de l'appel à l'API: {e}", exc_info=True)
