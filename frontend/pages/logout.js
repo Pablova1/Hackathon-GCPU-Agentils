@@ -17,8 +17,8 @@ export default function Logout() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>👋 Déconnexion...</h1>
-        <p>Vous allez être redirigé vers la page de connexion.</p>
+        <h1 style={styles.title}>👋 Logging out...</h1>
+        <p>You will be redirected to the login page.</p>
       </div>
     </div>
   );

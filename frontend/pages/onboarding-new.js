@@ -13,6 +13,8 @@ export default function Onboarding() {
   const [firstName, setFirstName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [showBodyTypeInfo, setShowBodyTypeInfo] = useState(null);
+  const [aiQuestion, setAiQuestion] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
   // Vérifier l'authentification et charger les questions
   useEffect(() => {
@@ -152,7 +154,7 @@ export default function Onboarding() {
     );
 
     if (missingAnswers.length > 0) {
-      setError('Veuillez répondre à toutes les questions obligatoires');
+      setError('Please answer all required questions');
       setSubmitting(false);
       return;
     }
@@ -170,7 +172,7 @@ export default function Onboarding() {
       if (q.type === 'number') {
         value = parseFloat(value);
         if (isNaN(value)) {
-          setError(`Valeur invalide pour: ${q.text}`);
+          setError(`Invalid value for: ${q.text}`);
           setSubmitting(false);
           return;
         }
@@ -201,18 +203,84 @@ export default function Onboarding() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Profil complété avec succès ! Redirection...');
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
+        // Vérifier s'il y a une question IA à poser
+        if (data.ai_question) {
+          setAiQuestion(data.ai_question);
+          setSessionId(data.session_id);
+          setSuccess('Great! One more question to personalize your experience...');
+          setSubmitting(false);
+        } else {
+          // Pas de question IA, rediriger directement
+          setSuccess('Profile completed successfully! Redirecting...');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+        }
       } else {
-        setError(data.detail || 'Erreur lors de la soumission du profil');
+        setError(data.detail || 'Error submitting profile');
         setSubmitting(false);
       }
     } catch (err) {
-      setError('Erreur de connexion au serveur');
+      setError('Server connection error');
       setSubmitting(false);
     }
+  };
+
+  const handleAiAnswerSubmit = async () => {
+    if (!aiQuestion || !sessionId) return;
+    
+    const aiAnswer = answers[aiQuestion.slot];
+    if (!aiAnswer || aiAnswer === '') {
+      setError('Please answer the question');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:8000/api/onboarding/answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          slot: aiQuestion.slot,
+          value: aiAnswer
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.next_question) {
+          // Il y a une autre question IA
+          setAiQuestion(data.next_question);
+          setAnswers(prev => ({...prev, [aiQuestion.slot]: ''})); // Effacer la réponse précédente
+          setSuccess('');
+        } else {
+          // Terminé, rediriger
+          setSuccess('All done! Redirecting...');
+          setTimeout(() => {
+            router.push('/');
+          }, 1500);
+        }
+      } else {
+        setError(data.detail || 'Error submitting answer');
+      }
+    } catch (err) {
+      setError('Server connection error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSkipAiQuestion = () => {
+    setSuccess('Profile completed! Redirecting...');
+    setTimeout(() => {
+      router.push('/');
+    }, 1500);
   };
 
   const renderQuestionInput = (question) => {
@@ -221,10 +289,10 @@ export default function Onboarding() {
     // Cas spécial pour bodyType avec explications
     if (question.slot === 'bodyType') {
       const bodyTypeInfo = {
-        'ectomorphic': '🌿 Ectomorphe : Silhouette fine, métabolisme rapide, difficulté à prendre du poids',
-        'mesomorphic': '💪 Mésomorphe : Musculature naturelle, prise de muscle facile, morphologie athlétique',
-        'endomorphic': '🌰 Endomorphe : Structure plus large, prise de poids facile, métabolisme lent',
-        'unknown': '❓ Je ne sais pas'
+        'ectomorphic': '🌿 Ectomorph: Slim silhouette, fast metabolism, difficulty gaining weight',
+        'mesomorphic': '💪 Mesomorph: Natural musculature, easy muscle gain, athletic build',
+        'endomorphic': '🌰 Endomorph: Larger frame, easy weight gain, slow metabolism',
+        'unknown': '❓ I don\'t know'
       };
 
       return (
@@ -282,7 +350,7 @@ export default function Onboarding() {
             value={value}
             onChange={(e) => handleAnswerChange(question.slot, e.target.value)}
             style={styles.input}
-            placeholder={question.placeholder || "Entrez un nombre"}
+            placeholder={question.placeholder || "Enter a number"}
             step="any"
             required={question.required}
           />
@@ -295,7 +363,7 @@ export default function Onboarding() {
             value={value}
             onChange={(e) => handleDateChange(question.slot, e.target.value)}
             style={styles.input}
-            placeholder={question.placeholder || "JJ/MM/AAAA"}
+            placeholder={question.placeholder || "DD/MM/YYYY"}
             required={question.required}
             maxLength="10"
           />
@@ -308,7 +376,7 @@ export default function Onboarding() {
             value={value}
             onChange={(e) => handleAnswerChange(question.slot, e.target.value)}
             style={{...styles.input, minHeight: '80px', resize: 'vertical'}}
-            placeholder={question.placeholder || "Votre réponse..."}
+            placeholder={question.placeholder || "Your answer..."}
             required={question.required}
           />
         );
@@ -318,12 +386,12 @@ export default function Onboarding() {
   // Organiser les questions par sections
   const organizeQuestions = (questions) => {
     const sections = {
-      'Informations de base': ['birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType'],
+      'Basic Information': ['birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType'],
       'Nutrition': ['dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences'],
-      'Santé': ['treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl'],
-      'Objectifs': ['goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail'],
-      'Restrictions religieuses': ['religiousPracticing'],
-      'Activité et mode de vie': ['activityLevel', 'sports', 'occupation', 'additionalNotes']
+      'Health': ['treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl'],
+      'Goals': ['goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail'],
+      'Religious Restrictions': ['religiousPracticing'],
+      'Activity & Lifestyle': ['activityLevel', 'sports', 'occupation', 'additionalNotes']
     };
 
     const organized = {};
@@ -355,7 +423,7 @@ export default function Onboarding() {
         {renderQuestionInput(question)}
         
         {/* Question conditionnelle pour birthControl */}
-        {question.slot === 'birthControl' && answers['birthControl'] === 'oui' && (
+        {question.slot === 'birthControl' && answers['birthControl'] === 'yes' && (
           <div style={styles.conditionalQuestion}>
             {allQuestions
               .filter(q => q.slot === 'birthControlName')
@@ -373,7 +441,7 @@ export default function Onboarding() {
         )}
         
         {/* Question conditionnelle pour religiousPracticing */}
-        {question.slot === 'religiousPracticing' && answers['religiousPracticing'] === 'oui' && (
+        {question.slot === 'religiousPracticing' && answers['religiousPracticing'] === 'yes' && (
           <div style={styles.conditionalQuestion}>
             {allQuestions
               .filter(q => q.slot === 'religiousType')
@@ -398,7 +466,7 @@ export default function Onboarding() {
       <div style={styles.container}>
         <div style={styles.card}>
           <div style={styles.spinner}></div>
-          <p>Chargement...</p>
+          <p>Loading...</p>
         </div>
       </div>
     );
@@ -415,19 +483,19 @@ export default function Onboarding() {
             style={styles.backButton}
             type="button"
           >
-            ← Retour
+            ← Back
           </button>
         )}
         
         <h1 style={styles.title}>
-          {isEditMode ? '✏️ Modifie ton profil' : '🍽️ Complète ton profil'}
+          {aiQuestion ? '🤖 One more thing...' : (isEditMode ? '✏️ Edit your profile' : '🍽️ Complete your profile')}
         </h1>
         
-        {firstName && (
+        {firstName && !aiQuestion && (
           <p style={styles.greeting}>
             {isEditMode 
-              ? `${firstName}, tu peux modifier tes réponses ci-dessous 🎯` 
-              : `Bienvenue ${firstName} ! Aide-nous à mieux te connaître 🎯`
+              ? `${firstName}, you can edit your answers below 🎯` 
+              : `Welcome ${firstName}! Help us get to know you better 🎯`
             }
           </p>
         )}
@@ -444,7 +512,62 @@ export default function Onboarding() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        {/* Question IA après soumission */}
+        {aiQuestion ? (
+          <div style={styles.aiQuestionContainer}>
+            <p style={styles.aiQuestionIntro}>
+              To better personalize your experience, we'd like to know:
+            </p>
+            <div style={styles.questionBlock}>
+              <label style={styles.questionLabel}>
+                {aiQuestion.text}
+              </label>
+              {aiQuestion.type === 'single_choice' ? (
+                <div style={styles.choicesContainer}>
+                  {aiQuestion.choices.map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      onClick={() => handleAnswerChange(aiQuestion.slot, choice)}
+                      style={{
+                        ...styles.choiceButton,
+                        ...(answers[aiQuestion.slot] === choice ? styles.choiceButtonSelected : {})
+                      }}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  value={answers[aiQuestion.slot] || ''}
+                  onChange={(e) => handleAnswerChange(aiQuestion.slot, e.target.value)}
+                  style={{...styles.input, minHeight: '100px', resize: 'vertical'}}
+                  placeholder={aiQuestion.placeholder || "Your answer..."}
+                />
+              )}
+            </div>
+            <div style={styles.aiButtonGroup}>
+              <button 
+                type="button"
+                onClick={handleSkipAiQuestion}
+                style={styles.skipButton}
+                disabled={submitting}
+              >
+                Skip
+              </button>
+              <button 
+                type="button"
+                onClick={handleAiAnswerSubmit}
+                style={styles.submitButton}
+                disabled={submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.form}>
           {Object.entries(organizedQuestions).map(([sectionName, sectionQuestions]) => (
             sectionQuestions.length > 0 && (
               <div key={sectionName} style={styles.section}>
@@ -461,9 +584,10 @@ export default function Onboarding() {
             style={styles.submitButton}
             disabled={submitting}
           >
-            {submitting ? 'Envoi en cours...' : 'Valider mon profil ✨'}
+            {submitting ? 'Submitting...' : 'Validate my profile ✨'}
           </button>
         </form>
+        )}
       </div>
     </div>
   );
@@ -672,6 +796,37 @@ const styles = {
     borderLeft: '3px solid #4CAF50',
     backgroundColor: '#f0f9f0',
     borderRadius: '0 8px 8px 0'
+  },
+  aiQuestionContainer: {
+    backgroundColor: '#f0f4ff',
+    padding: '30px',
+    borderRadius: '12px',
+    border: '2px solid #4CAF50',
+    marginTop: '20px'
+  },
+  aiQuestionIntro: {
+    fontSize: '16px',
+    color: '#555',
+    marginBottom: '20px',
+    textAlign: 'center',
+    fontWeight: '500'
+  },
+  aiButtonGroup: {
+    display: 'flex',
+    gap: '15px',
+    marginTop: '25px',
+    justifyContent: 'center'
+  },
+  skipButton: {
+    padding: '12px 30px',
+    backgroundColor: 'transparent',
+    color: '#666',
+    border: '2px solid #ddd',
+    borderRadius: '8px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    transition: 'all 0.2s'
   }
 };
 

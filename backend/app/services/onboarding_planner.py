@@ -46,149 +46,149 @@ OPTIONAL_SLOTS = [
 QUESTION_BANK = {
     # ===== INFORMATIONS DE BASE =====
     "birthDate": {
-        "text": "Quelle est ta date de naissance ?", 
+        "text": "What is your date of birth?", 
         "type": "date", 
-        "placeholder": "JJ/MM/AAAA"
+        "placeholder": "DD/MM/YYYY"
     },
     "gender": {
-        "text": "Quel est ton genre ?", 
+        "text": "What is your gender?", 
         "type": "single_choice",
         "choices": ["Male", "Female", "Other"]
     },
     "heightCm": {
-        "text": "Quelle est ta taille (en cm) ?", 
+        "text": "What is your height (in cm)?", 
         "type": "number", 
         "placeholder": "Ex: 170"
     },
     "weightKg": {
-        "text": "Quel est ton poids (en kg) ?", 
+        "text": "What is your weight (in kg)?", 
         "type": "number", 
         "placeholder": "Ex: 70"
     },
     "bodyType": {
-        "text": "Quel est ton type de morphologie ?", 
+        "text": "What is your body type?", 
         "type": "single_choice",
         "choices": ["ectomorphic", "mesomorphic", "endomorphic", "unknown"]
     },
     
     # ===== NUTRITION =====
     "dietType": {
-        "text": "Quel est ton régime alimentaire ?", 
+        "text": "What is your diet type?", 
         "type": "single_choice",
-        "choices": ["omnivore", "vegetarian", "vegan", "halal", "kosher", "autre"]
+        "choices": ["omnivore", "vegetarian", "vegan", "halal", "kosher", "other"]
     },
     "allergies": {
-        "text": "As-tu des allergies alimentaires ? (sépare par des virgules, laisse vide si aucune)", 
+        "text": "Do you have any food allergies? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: arachides, fruits de mer"
+        "placeholder": "Ex: peanuts, seafood"
     },
     "intolerances": {
-        "text": "As-tu des intolérances alimentaires ? (sépare par des virgules, laisse vide si aucune)", 
+        "text": "Do you have any food intolerances? (separate by commas, leave blank if none)", 
         "type": "text", 
         "placeholder": "Ex: lactose, gluten"
     },
     "foodLikes": {
-        "text": "Quels aliments aimes-tu particulièrement ? (sépare par des virgules)", 
+        "text": "What foods do you particularly like? (separate by commas)", 
         "type": "text", 
-        "placeholder": "Ex: pâtes, poulet, légumes verts"
+        "placeholder": "Ex: pasta, chicken, green vegetables"
     },
     "foodDislikes": {
-        "text": "Quels aliments n'aimes-tu pas ? (sépare par des virgules, laisse vide si aucun)", 
+        "text": "What foods do you dislike? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: poisson, épinards"
+        "placeholder": "Ex: fish, spinach"
     },
     "foodPreferences": {
-        "text": "Préférences générales (bio, local, etc.) ? (sépare par des virgules, laisse vide si aucune)", 
+        "text": "General preferences (organic, local, etc.)? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: bio, local"
+        "placeholder": "Ex: organic, local"
     },
     
     # ===== SANTÉ =====
     "treatments": {
-        "text": "Prends-tu des traitements médicaux ? (sépare par des virgules, laisse vide si aucun)", 
+        "text": "Are you taking any medical treatments? (separate by commas, leave blank if none)", 
         "type": "text", 
         "placeholder": "Ex: Levothyrox 75mcg"
     },
     "medicalHistoryPersonal": {
-        "text": "As-tu des antécédents médicaux personnels ? (sépare par des virgules, laisse vide si aucun)", 
+        "text": "Do you have any personal medical history? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: diabète type 2, hypertension"
+        "placeholder": "Ex: type 2 diabetes, hypertension"
     },
     "medicalHistoryFamily": {
-        "text": "As-tu des antécédents médicaux familiaux ? (sépare par des virgules, laisse vide si aucun)", 
+        "text": "Do you have any family medical history? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: diabète, maladies cardiaques"
+        "placeholder": "Ex: diabetes, heart disease"
     },
     "birthControl": {
-        "text": "Utilises-tu un moyen de contraception ?", 
+        "text": "Are you using any form of birth control?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "birthControlName": {
-        "text": "Lequel ?", 
+        "text": "Which one?", 
         "type": "text", 
-        "placeholder": "Ex: pilule, stérilet"
+        "placeholder": "Ex: pill, IUD"
     },
     
     # ===== OBJECTIFS =====
     "goalMuscleGain": {
-        "text": "Souhaites-tu prendre du muscle ?", 
+        "text": "Do you want to gain muscle?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "goalWeightLoss": {
-        "text": "Souhaites-tu perdre du poids ?", 
+        "text": "Do you want to lose weight?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "goalPerformance": {
-        "text": "Souhaites-tu améliorer tes performances sportives ?", 
+        "text": "Do you want to improve your athletic performance?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "goalMaintainShape": {
-        "text": "Souhaites-tu maintenir ta forme actuelle ?", 
+        "text": "Do you want to maintain your current shape?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "goalDetail": {
-        "text": "Décris ton objectif principal en quelques mots", 
+        "text": "Describe your main goal in a few words", 
         "type": "text", 
-        "placeholder": "Ex: Perdre 5kg en 3 mois, Prendre de la masse musculaire"
+        "placeholder": "Ex: Lose 5kg in 3 months, Build muscle mass"
     },
     
     # ===== RESTRICTIONS RELIGIEUSES =====
     "religiousPracticing": {
-        "text": "As-tu des restrictions alimentaires religieuses ?", 
+        "text": "Do you have any religious dietary restrictions?", 
         "type": "single_choice",
-        "choices": ["oui", "non"]
+        "choices": ["yes", "no"]
     },
     "religiousType": {
-        "text": "Lesquelles ?", 
+        "text": "Which ones?", 
         "type": "text", 
-        "placeholder": "Ex: halal, casher"
+        "placeholder": "Ex: halal, kosher"
     },
     
     # ===== ACTIVITÉ ET MODE DE VIE =====
     "activityLevel": {
-        "text": "Quel est ton niveau d'activité physique ?", 
+        "text": "What is your physical activity level?", 
         "type": "single_choice",
         "choices": ["low", "moderate", "high"]
     },
     "sports": {
-        "text": "Quels sports pratiques-tu ? (sépare par des virgules, laisse vide si aucun)", 
+        "text": "What sports do you practice? (separate by commas, leave blank if none)", 
         "type": "text", 
-        "placeholder": "Ex: course à pied, yoga, musculation"
+        "placeholder": "Ex: running, yoga, weight training"
     },
     "occupation": {
-        "text": "Quelle est ta profession ou occupation principale ?", 
+        "text": "What is your main profession or occupation?", 
         "type": "text", 
-        "placeholder": "Ex: étudiant, ingénieur, commercial"
+        "placeholder": "Ex: student, engineer, sales"
     },
     "additionalNotes": {
-        "text": "Y a-t-il d'autres informations importantes à savoir sur toi ? (optionnel)", 
+        "text": "Is there any other important information we should know about you? (optional)", 
         "type": "text", 
-        "placeholder": "Ex: Préfère manger tôt le soir, mange souvent au restaurant"
+        "placeholder": "Ex: Prefer to eat early in the evening, often eat out"
     },
 }
 

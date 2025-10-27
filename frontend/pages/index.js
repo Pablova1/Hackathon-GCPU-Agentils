@@ -46,8 +46,8 @@ export default function Home() {
             }
           }
         } catch (err) {
-          console.log('Erreur lors de la vérification du profil:', err);
-          // Continuer même en cas d'erreur
+          console.log('Error checking profile:', err);
+          // Continue even if there's an error
         }
       }
     };
@@ -70,8 +70,8 @@ export default function Home() {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.error('Erreur accès caméra:', err);
-      alert('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+      console.error('Camera access error:', err);
+      alert('Unable to access the camera. Please check permissions.');
       setShowCamera(false);
     }
   };
@@ -177,15 +177,15 @@ export default function Home() {
       setAnalysisResult(data);
       setEditableAliments(data.aliments || []);
       
-      // Afficher un message de succès
+      // Display success message
       if (data.aliments && data.aliments.length > 0) {
-        console.log(`${data.nombre_aliments} aliment(s) détecté(s) !`);
+        console.log(`${data.nombre_aliments} food item(s) detected!`);
       } else {
-        alert('Aucun aliment détecté. Veuillez réessayer avec une meilleure photo.');
+        alert('No food detected. Please try again with a better photo.');
       }
     } catch (error) {
-      console.error('Erreur analyse:', error);
-      alert('Erreur lors de l\'analyse de l\'image. Veuillez réessayer.');
+      console.error('Analysis error:', error);
+      alert('Error analyzing image. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -199,13 +199,13 @@ export default function Home() {
 
   const handleValidateAliments = async () => {
     if (editableAliments.length === 0) {
-      alert('Aucun aliment à valider.');
+      alert('No food items to validate.');
       return;
     }
 
     const token = localStorage.getItem('session_token');
     if (!token) {
-      alert('Session expirée. Veuillez vous reconnecter.');
+      alert('Session expired. Please log in again.');
       router.push('/auth');
       return;
     }
@@ -224,29 +224,29 @@ export default function Home() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          alert('Session expirée. Veuillez vous reconnecter.');
+          alert('Session expired. Please log in again.');
           router.push('/auth');
           return;
         }
-        throw new Error(`Erreur HTTP: ${response.status}`);
+        throw new Error(`HTTP Error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Repas validé:', data);
+      console.log('Meal validated:', data);
       
-      alert(`✅ Repas enregistré avec succès !\n\nID: ${data.meal_id}\n\nSuggestions en cours de génération...`);
+      alert(`✅ Meal saved successfully!\n\nID: ${data.meal_id}\n\nSuggestions are being generated...`);
       
-      // Réinitialiser l'interface
+      // Reset interface
       setSelectedImage(null);
       setAnalysisResult(null);
       setEditableAliments([]);
       
-      // Optionnel: rediriger vers la page des suggestions
+      // Optional: redirect to suggestions page
       // router.push('/suggestion');
       
     } catch (error) {
-      console.error('Erreur validation:', error);
-      alert('Erreur lors de l\'enregistrement du repas. Veuillez réessayer.');
+      console.error('Validation error:', error);
+      alert('Error saving meal. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -265,14 +265,14 @@ export default function Home() {
     <div className={styles.container}>
       {/* Header avec profil */}
       <header className={styles.header}>
-        <button className={styles.profileIcon} onClick={handleProfileClick} title="Modifier mon profil">
+        <button className={styles.profileIcon} onClick={handleProfileClick} title="Edit my profile">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
             <circle cx="12" cy="8" r="4"/>
             <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
           </svg>
         </button>
         <div style={{ width: '40px' }}></div>
-        <button className={styles.logoutButton} onClick={handleLogout} title="Déconnexion">
+        <button className={styles.logoutButton} onClick={handleLogout} title="Logout">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -284,7 +284,7 @@ export default function Home() {
       {/* Animation TrueFocus entre header et main */}
       <div className={styles.trueFocusSection}>
         <TrueFocus 
-          sentence="Assiette prête?"
+          sentence="Plate ready?"
           manualMode={false}
           blurAmount={5}
           borderColor="#66BB6A"
@@ -313,7 +313,7 @@ export default function Home() {
               <span className={styles.corner + ' ' + styles.bottomLeft}></span>
               <span className={styles.corner + ' ' + styles.bottomRight}></span>
             </div>
-            <p className={styles.scanText}>Scanne moi</p>
+            <p className={styles.scanText}>Scan me</p>
             <div className={styles.buttonGroup}>
               <button className={styles.scanButton} onClick={handleScanClick}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -333,13 +333,13 @@ export default function Home() {
         ) : selectedImage ? (
           <div className={styles.analysisContainer}>
             <div className={styles.imageSection}>
-              <img src={selectedImage} alt="Image sélectionnée" className={styles.selectedImage} />
+              <img src={selectedImage} alt="Selected image" className={styles.selectedImage} />
               
               {/* Indicateur de chargement pendant l'analyse */}
               {isAnalyzing && (
                 <div className={styles.analyzingOverlay}>
                   <div className={styles.spinner}></div>
-                  <p className={styles.analyzingText}>Analyse en cours...</p>
+                  <p className={styles.analyzingText}>Analyzing...</p>
                 </div>
               )}
               
@@ -359,8 +359,8 @@ export default function Home() {
             {analysisResult && (
               <div className={styles.editPanel}>
                 <div className={styles.editHeader}>
-                  <h3>{editableAliments.length} aliment(s) détecté(s)</h3>
-                  <p className={styles.editSubtitle}>Modifiez les quantités si nécessaire</p>
+                  <h3>{editableAliments.length} food item(s) detected</h3>
+                  <p className={styles.editSubtitle}>Edit quantities if needed</p>
                 </div>
                 
                 <div className={styles.alimentEditList}>
@@ -371,7 +371,7 @@ export default function Home() {
                         value={aliment.name}
                         onChange={(e) => handleAlimentChange(index, 'name', e.target.value)}
                         className={styles.alimentNameInput}
-                        placeholder="Nom de l'aliment"
+                        placeholder="Food name"
                         disabled={isAnalyzing}
                       />
                       <div className={styles.quantityControl}>
@@ -388,7 +388,7 @@ export default function Home() {
                       <button 
                         className={styles.deleteButton}
                         onClick={() => handleDeleteAliment(index)}
-                        title="Supprimer"
+                        title="Delete"
                         disabled={isAnalyzing}
                       >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -410,7 +410,7 @@ export default function Home() {
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    Ajouter un aliment
+                    Add food item
                   </button>
                   <button 
                     className={styles.validateButton} 
@@ -420,10 +420,10 @@ export default function Home() {
                     {isAnalyzing ? (
                       <>
                         <div className={styles.buttonSpinner}></div>
-                        Enregistrement...
+                        Saving...
                       </>
                     ) : (
-                      'Valider'
+                      'Validate'
                     )}
                   </button>
                 </div>
@@ -461,8 +461,8 @@ export default function Home() {
           onClick={() => router.push('/suggestion')}
         >
           <div className={styles.suggestionInfo}>
-            <span className={styles.suggestionName}>Suggestions de repas</span>
-            <span className={styles.suggestionSubtext}>Voir mes recommandations</span>
+            <span className={styles.suggestionName}>Meal suggestions</span>
+            <span className={styles.suggestionSubtext}>View my recommendations</span>
           </div>
           <button className={styles.suggestionArrow}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

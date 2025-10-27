@@ -18,7 +18,7 @@ export default function Welcome() {
     <div className={styles.container}>
       {/* Bienvenue en haut */}
       <div className={styles.welcomeHeader}>
-        <h1 className={styles.welcomeText}>Bienvenue</h1>
+        <h1 className={styles.welcomeText}>Welcome</h1>
       </div>
 
       {/* Logo au centre */}
@@ -41,10 +41,10 @@ export default function Welcome() {
       {/* Boutons en bas */}
       <div className={styles.buttonSection}>
         <button className={styles.authButton} onClick={handleSignIn}>
-          S'inscrire
+          Sign Up
         </button>
         <button className={styles.authButton} onClick={handleLogIn}>
-          Se connecter
+          Log In
         </button>
       </div>
     </div>

@@ -70,7 +70,7 @@ export default function Auth() {
         localStorage.setItem('last_name', data.last_name);
         localStorage.setItem('email', data.email);
 
-        setSuccess('Connexion réussie ! Redirection...');
+        setSuccess('Login successful! Redirecting...');
         
         // Rediriger vers la page principale après 1 seconde
         setTimeout(() => {
@@ -86,11 +86,11 @@ export default function Auth() {
           // Erreur métier (400)
           setError(data.detail);
         } else {
-          setError('Erreur de connexion');
+          setError('Login error');
         }
       }
     } catch (err) {
-      setError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
+      setError('Server connection error. Please check that the API is running.');
     } finally {
       setLoading(false);
     }
@@ -103,12 +103,12 @@ export default function Auth() {
 
     // Validation
     if (registerData.password !== registerData.passwordConfirm) {
-      setError('Les mots de passe ne correspondent pas');
+      setError('Passwords do not match');
       return;
     }
 
     if (registerData.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError('Password must be at least 6 characters long');
       return;
     }
 
@@ -138,7 +138,7 @@ export default function Auth() {
         localStorage.setItem('last_name', data.last_name);
         localStorage.setItem('email', data.email);
 
-        setSuccess('Inscription réussie ! Redirection vers l\'onboarding...');
+        setSuccess('Registration successful! Redirecting to onboarding...');
         
         // Rediriger vers l'onboarding après l'inscription
         setTimeout(() => {
@@ -154,11 +154,11 @@ export default function Auth() {
           // Erreur métier (400)
           setError(data.detail);
         } else {
-          setError('Erreur lors de l\'inscription');
+          setError('Registration error');
         }
       }
     } catch (err) {
-      setError('Erreur de connexion au serveur. Vérifiez que l\'API est démarrée.');
+      setError('Server connection error. Please check that the API is running.');
     } finally {
       setLoading(false);
     }
@@ -181,7 +181,7 @@ export default function Auth() {
       <div className={styles.card} data-tab={activeTab}>
         <div className={styles.header} data-tab={activeTab}>
           <h1>MY PLATE</h1>
-          <p>{activeTab === 'register' ? 'Créez votre compte' : 'Bon retour parmi nous !'}</p>
+          <p>{activeTab === 'register' ? 'Create your account' : 'Welcome back!'}</p>
         </div>
 
         <div className={styles.tabs} data-tab={activeTab}>
@@ -189,13 +189,13 @@ export default function Auth() {
             className={`${styles.tab} ${activeTab === 'login' ? styles.active : ''}`}
             onClick={() => setActiveTab('login')}
           >
-            Connexion
+            Login
           </button>
           <button 
             className={`${styles.tab} ${activeTab === 'register' ? styles.active : ''}`}
             onClick={() => setActiveTab('register')}
           >
-            Inscription
+            Sign Up
           </button>
         </div>
 
@@ -216,7 +216,7 @@ export default function Auth() {
           {loading && (
             <div className={styles.loading}>
               <div className={styles.spinner}></div>
-              <p>Traitement en cours...</p>
+              <p>Processing...</p>
             </div>
           )}
 
@@ -228,7 +228,7 @@ export default function Auth() {
                 <input
                   type="email"
                   id="loginEmail"
-                  placeholder="votre.email@example.com"
+                  placeholder="your.email@example.com"
                   value={loginData.email}
                   onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                   required
@@ -236,11 +236,11 @@ export default function Auth() {
               </div>
 
               <div className={styles.formGroup} data-tab={activeTab}>
-                <label htmlFor="loginPassword">Mot de passe</label>
+                <label htmlFor="loginPassword">Password</label>
                 <input
                   type="password"
                   id="loginPassword"
-                  placeholder="Votre mot de passe"
+                  placeholder="Your password"
                   value={loginData.password}
                   onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                   required
@@ -248,7 +248,7 @@ export default function Auth() {
               </div>
 
               <button type="submit" className={styles.submitButton} data-tab={activeTab}>
-                Se connecter
+                Log In
               </button>
             </form>
           )}
@@ -257,11 +257,11 @@ export default function Auth() {
           {activeTab === 'register' && !loading && (
             <form onSubmit={handleRegister} className={styles.form}>
               <div className={styles.formGroup} data-tab={activeTab}>
-                <label htmlFor="registerFirstName">Prénom</label>
+                <label htmlFor="registerFirstName">First Name</label>
                 <input
                   type="text"
                   id="registerFirstName"
-                  placeholder="Votre prénom"
+                  placeholder="Your first name"
                   minLength="1"
                   maxLength="50"
                   value={registerData.first_name}
@@ -271,11 +271,11 @@ export default function Auth() {
               </div>
 
               <div className={styles.formGroup} data-tab={activeTab}>
-                <label htmlFor="registerLastName">Nom</label>
+                <label htmlFor="registerLastName">Last Name</label>
                 <input
                   type="text"
                   id="registerLastName"
-                  placeholder="Votre nom de famille"
+                  placeholder="Your last name"
                   minLength="1"
                   maxLength="50"
                   value={registerData.last_name}
@@ -289,7 +289,7 @@ export default function Auth() {
                 <input
                   type="email"
                   id="registerEmail"
-                  placeholder="votre.email@example.com"
+                  placeholder="your.email@example.com"
                   value={registerData.email}
                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                   required
@@ -297,11 +297,11 @@ export default function Auth() {
               </div>
 
               <div className={styles.formGroup} data-tab={activeTab}>
-                <label htmlFor="registerPassword">Mot de passe</label>
+                <label htmlFor="registerPassword">Password</label>
                 <input
                   type="password"
                   id="registerPassword"
-                  placeholder="Minimum 6 caractères"
+                  placeholder="Minimum 6 characters"
                   minLength="6"
                   value={registerData.password}
                   onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
@@ -310,11 +310,11 @@ export default function Auth() {
               </div>
 
               <div className={styles.formGroup} data-tab={activeTab}>
-                <label htmlFor="registerPasswordConfirm">Confirmer le mot de passe</label>
+                <label htmlFor="registerPasswordConfirm">Confirm Password</label>
                 <input
                   type="password"
                   id="registerPasswordConfirm"
-                  placeholder="Répétez votre mot de passe"
+                  placeholder="Repeat your password"
                   value={registerData.passwordConfirm}
                   onChange={(e) => setRegisterData({ ...registerData, passwordConfirm: e.target.value })}
                   required
@@ -322,7 +322,7 @@ export default function Auth() {
               </div>
 
               <button type="submit" className={styles.submitButton} data-tab={activeTab}>
-                S'inscrire
+                Sign Up
               </button>
             </form>
           )}
