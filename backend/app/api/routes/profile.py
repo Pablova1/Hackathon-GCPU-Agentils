@@ -24,7 +24,8 @@ async def check_profile_status(user_id: str = Query(..., description="ID de l'ut
     Retourne:
     {
         "profile_completed": bool,
-        "user_exists": bool
+        "user_exists": bool,
+        "profile": {...}  # Données du profil utilisateur
     }
     """
     try:
@@ -38,12 +39,17 @@ async def check_profile_status(user_id: str = Query(..., description="ID de l'ut
         if not user:
             return {
                 "profile_completed": False,
-                "user_exists": False
+                "user_exists": False,
+                "profile": None
             }
+        
+        # Récupérer le profil utilisateur
+        profile = user.get("profile", user.get("profil", {}))
         
         return {
             "profile_completed": user.get("profile_completed", False),
-            "user_exists": True
+            "user_exists": True,
+            "profile": profile
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")

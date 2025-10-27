@@ -113,18 +113,73 @@ async def submit_all_answers(request: AllAnswersRequest):
         logger.info(f"Profil mappé - email: {mapped.get('email')}")
         logger.debug(f"Profil complet mappé: {mapped}")
         
-        # Mettre à jour l'utilisateur existant avec les nouvelles informations
+        # Mettre à jour l'utilisateur existant avec TOUTES les nouvelles informations
         update_data = {
+            # Profile
             "profile.age": mapped["age"],
             "profile.gender": mapped["gender"],
             "profile.weight": mapped["weight_kg"],
             "profile.height": mapped["height_cm"],
             "profile.bodyType": mapped["bodyType"],
+            
+            # Medical
+            "medical.treatments": mapped["treatments"],
+            "medical.allergies": mapped["allergies"],
+            # medicalHistory sera géré séparément pour éviter l'erreur MongoDB
+            
+            # Nutrition
             "nutrition.diet": mapped["diet"],
+            "nutrition.intolerances": mapped["intolerances"],
+            # preferences sera géré séparément pour éviter l'erreur MongoDB
+            
+            # Goals
+            "goals.muscleGain": mapped["muscleGain"],
+            "goals.weightLoss": mapped["weightLoss"],
+            "goals.goalDetail": mapped.get("goalDetail"),
+            "goals.performance": mapped["performance"],
+            "goals.maintainShape": mapped["maintainShape"],
+            
+            # Misc
             "misc.activityLevel": mapped["activityLevel"],
+            "misc.sports": mapped["sports"],
+            "misc.occupation": mapped.get("occupation"),
+            "misc.notes": mapped.get("notes"),
+            
+            # Metadata
             "profile_completed": True,
             "onboarded_at": datetime.now()
         }
+        
+        # Gérer medicalHistory séparément pour éviter l'erreur "Cannot create field in element {medicalHistory: null}"
+        update_data["medical.medicalHistory"] = {
+            "personal": mapped["medicalHistory_personal"],
+            "family": mapped["medicalHistory_family"]
+        }
+        
+        # Gérer birthControl séparément pour éviter l'erreur "Cannot create field 'name' in element {birthControl: null}"
+        if mapped["birthControl_uses"]:
+            update_data["medical.birthControl"] = {
+                "uses": True,
+                "name": mapped.get("birthControl_name")
+            }
+        else:
+            update_data["medical.birthControl"] = None
+        
+        # Gérer preferences séparément pour éviter l'erreur "Cannot create field 'disliked' in element {preferences: null}"
+        update_data["nutrition.preferences"] = {
+            "liked": mapped["preferences_liked"],
+            "disliked": mapped["preferences_disliked"],
+            "general": mapped["preferences_general"]
+        }
+        
+        # Gérer religiousRestrictions séparément pour la même raison
+        if mapped["religiousPracticing"]:
+            update_data["religiousRestrictions"] = {
+                "practicing": True,
+                "type": mapped.get("religiousType")
+            }
+        else:
+            update_data["religiousRestrictions"] = None
         
         result = await users.update_one(
             {"user_id": request.user_id},
@@ -412,6 +467,20 @@ async def end_onboarding(session_id: str = Query(..., description="ID de la sess
 def map_minimal_slots_to_full_profile(slots: dict) -> dict:
     """Mappe les slots de l'onboarding vers le modèle UserDocument complet."""
     
+    def parse_list_field(value):
+        """Parse un champ texte en liste (séparé par des virgules)."""
+        if not value or value.lower() in ["aucun", "aucune", "non applicable", ""]:
+            return []
+        if isinstance(value, list):
+            return [item.strip() for item in value]
+        return [item.strip() for item in str(value).split(",") if item.strip()]
+    
+    def parse_bool_field(value):
+        """Convertit 'oui'/'non' en booléen."""
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ["oui", "yes", "true", "1"]
+    
     # Calculer l'âge depuis la date de naissance
     age = 0
     if "birthDate" in slots:
@@ -423,7 +492,6 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
             age = 0
     
     # Extraire les réponses IA (slots qui commencent par "ai_followup_")
-    # et stocker aussi les questions IA associées
     ai_entries = []
     regular_slots = {}
     
@@ -435,10 +503,22 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
         elif not key.endswith("_question"):  # Ignorer les clés de questions stockées
             regular_slots[key] = value
     
-    # Créer une note avec les questions et réponses IA
-    notes = None
+    # Créer une note avec les questions et réponses IA + notes additionnelles
+    notes = regular_slots.get("additionalNotes", "")
     if ai_entries:
-        notes = "Informations supplémentaires - " + " || ".join(ai_entries)
+        ai_notes = "Informations supplémentaires - " + " || ".join(ai_entries)
+        notes = f"{notes}\n{ai_notes}" if notes else ai_notes
+    
+    # Parser les traitements (format: "nom dosage condition" ou juste "nom")
+    treatments = []
+    treatments_raw = parse_list_field(regular_slots.get("treatments", ""))
+    for treatment in treatments_raw:
+        parts = treatment.split()
+        treatments.append({
+            "name": parts[0] if parts else treatment,
+            "dosage": parts[1] if len(parts) > 1 else None,
+            "condition": " ".join(parts[2:]) if len(parts) > 2 else None
+        })
     
     return {
         # ProfileCore
@@ -452,29 +532,34 @@ def map_minimal_slots_to_full_profile(slots: dict) -> dict:
         "bodyType": regular_slots.get("bodyType", "unknown"),
         
         # Medical
-        "treatments": [],
-        "allergies": [],
-        "medicalHistory_personal": [],
-        "medicalHistory_family": [],
-        "birthControl_uses": False,
+        "treatments": treatments,
+        "allergies": parse_list_field(regular_slots.get("allergies", "")),
+        "medicalHistory_personal": parse_list_field(regular_slots.get("medicalHistoryPersonal", "")),
+        "medicalHistory_family": parse_list_field(regular_slots.get("medicalHistoryFamily", "")),
+        "birthControl_uses": parse_bool_field(regular_slots.get("birthControl", "non")),
+        "birthControl_name": regular_slots.get("birthControlName") if parse_bool_field(regular_slots.get("birthControl", "non")) else None,
         
         # Nutrition
         "diet": regular_slots.get("dietType"),
-        "intolerances": [],
-        "preferences_liked": [],
-        "preferences_disliked": [],
-        "preferences_general": [],
+        "intolerances": parse_list_field(regular_slots.get("intolerances", "")),
+        "preferences_liked": parse_list_field(regular_slots.get("foodLikes", "")),
+        "preferences_disliked": parse_list_field(regular_slots.get("foodDislikes", "")),
+        "preferences_general": parse_list_field(regular_slots.get("foodPreferences", "")),
         
         # Goals
-        "muscleGain": False,
-        "weightLoss": False,
-        "goalDetail": None,
-        "performance": False,
-        "maintainShape": False,
+        "muscleGain": parse_bool_field(regular_slots.get("goalMuscleGain", "non")),
+        "weightLoss": parse_bool_field(regular_slots.get("goalWeightLoss", "non")),
+        "goalDetail": regular_slots.get("goalDetail"),
+        "performance": parse_bool_field(regular_slots.get("goalPerformance", "non")),
+        "maintainShape": parse_bool_field(regular_slots.get("goalMaintainShape", "non")),
         
-        # Misc (avec les questions et réponses IA dans notes)
+        # Religious restrictions
+        "religiousPracticing": parse_bool_field(regular_slots.get("religiousPracticing", "non")),
+        "religiousType": regular_slots.get("religiousType") if parse_bool_field(regular_slots.get("religiousPracticing", "non")) else None,
+        
+        # Misc
         "activityLevel": regular_slots.get("activityLevel"),
-        "sports": [],
-        "occupation": None,
-        "notes": notes,  # Les questions et réponses IA sont stockées ici
+        "sports": parse_list_field(regular_slots.get("sports", "")),
+        "occupation": regular_slots.get("occupation"),
+        "notes": notes if notes else None,
     }

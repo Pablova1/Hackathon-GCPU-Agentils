@@ -28,9 +28,20 @@ async def create_user_document(user_id: str, slots: dict) -> dict:
         raise ValueError(f"Utilisateur {user_id} n'existe pas. Inscription requise avant l'onboarding.")
     
     # Construire le ProfileCore depuis les slots
+    # Récupérer les informations existantes du profil (email, firstName, lastName)
+    existing_profile = existing_user.get("profile", {})
+    user_email = existing_profile.get("email", "")
+    user_first_name = slots.get("firstName") or existing_profile.get("firstName", "")
+    user_last_name = slots.get("lastName") or existing_profile.get("lastName", "")
+    
+    # Validation : l'email ne doit jamais être vide (contrainte d'unicité dans MongoDB)
+    if not user_email:
+        raise ValueError(f"Email manquant pour l'utilisateur {user_id}. Le profil doit avoir un email.")
+    
     profile = ProfileCore(
-        lastName=slots.get("lastName", ""),
-        firstName=slots.get("firstName", ""),
+        lastName=user_last_name,
+        firstName=user_first_name,
+        email=user_email,  # Récupérer l'email de l'utilisateur existant depuis profile.email
         age=int(slots.get("age", 0)) if slots.get("age") else 0,
         gender=slots.get("gender", "Other"),
         weight=float(slots.get("weight_kg", 0)) if slots.get("weight_kg") else 0.0,

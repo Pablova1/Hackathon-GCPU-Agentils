@@ -118,12 +118,12 @@ class MealSuggestionAgent:
         logger.info(f"Retrieved {len(recent_meals)} meals for user {user_id}")
         
         # Support des deux structures MongoDB (ancienne et nouvelle)
-        profile = user.get("profile", user.get("profil", {}))
-        medical = user.get("medical", {})
-        nutrition = user.get("nutrition", user.get("alimentaire", {}))
-        goals = user.get("goals", user.get("objectifs", {}))
-        religious = user.get("religiousRestrictions", user.get("obligations_religieuses", {}))
-        misc = user.get("misc", user.get("divers", {}))
+        profile = user.get("profile", user.get("profil", {})) or {}
+        medical = user.get("medical", {}) or {}
+        nutrition = user.get("nutrition", user.get("alimentaire", {})) or {}
+        goals = user.get("goals", user.get("objectifs", {})) or {}
+        religious = user.get("religiousRestrictions", user.get("obligations_religieuses", {})) or {}
+        misc = user.get("misc", user.get("divers", {})) or {}
         
         # Construire le contexte structuré
         context = {

@@ -13,6 +13,7 @@ export default function Suggestion() {
   const [mealSuggestions, setMealSuggestions] = useState([]);
   const [suggestionStatus, setSuggestionStatus] = useState('');
   const [generatedAt, setGeneratedAt] = useState(null);
+  const [profileComplete, setProfileComplete] = useState(true);
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
@@ -47,6 +48,31 @@ export default function Suggestion() {
     setError(null);
     
     try {
+      // Vérifier d'abord si le profil est complet
+      const profileRes = await fetch(`http://localhost:8000/api/profile/check?user_id=${user_id}`, {
+        headers: {
+          'X-Session-Token': sessionToken
+        }
+      });
+      
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        console.log('Profile data:', profileData); // Debug
+        
+        // Vérifier principalement avec profile_completed
+        // Si profile_completed est true, on considère le profil comme complet
+        const isProfileComplete = profileData.profile_completed === true;
+        
+        if (!isProfileComplete) {
+          console.log('Profile incomplete. profile_completed:', profileData.profile_completed); // Debug
+          setProfileComplete(false);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Profile is complete!'); // Debug
+      }
+      
       // Récupérer la motivation
       const motivationRes = await fetch(`http://localhost:8000/api/suggestions/motivation/${user_id}`);
       if (!motivationRes.ok) {
@@ -83,12 +109,84 @@ export default function Suggestion() {
     }
   };
 
+  const handleGenerateSuggestions = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    setSuggestionStatus('generating');
+    
+    try {
+      const response = await fetch(`http://localhost:8000/api/suggestions/trigger/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du déclenchement de la génération');
+      }
+      
+      // Attendre quelques secondes puis rafraîchir
+      setTimeout(() => {
+        fetchSuggestionsFromDB(userId);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Erreur:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
   const handleGoBack = () => {
     router.push('/');
   };
 
   if (!sessionToken || !userId) {
     return <div style={{ padding: '20px' }}>Chargement...</div>;
+  }
+
+  if (!profileComplete) {
+    return (
+      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', padding: '50px', background: '#fff3cd', borderRadius: '8px' }}>
+          <h2 style={{ color: '#ff6f00', marginBottom: '20px' }}>⚠️ Profil incomplet</h2>
+          <p style={{ fontSize: '18px', marginBottom: '15px' }}>
+            Pour recevoir des suggestions personnalisées, vous devez d'abord compléter votre profil !
+          </p>
+          <p style={{ marginBottom: '30px', color: '#666' }}>
+            Nous avons besoin de connaître votre âge, poids, taille et vos objectifs pour vous proposer 
+            des repas adaptés à vos besoins.
+          </p>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+            <button onClick={() => router.push('/onboarding-new')} style={{ 
+              padding: '12px 24px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}>
+              Compléter mon profil
+            </button>
+            <button onClick={handleGoBack} style={{ 
+              padding: '12px 24px',
+              background: '#757575',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}>
+              Retour
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -166,39 +264,81 @@ export default function Suggestion() {
       return (
         <div style={{ textAlign: 'center', padding: '50px', background: '#ffebee', borderRadius: '8px' }}>
           <h2 style={{ color: '#f44336' }}>❌ Erreur de génération</h2>
-          <p>Une erreur s'est produite lors de la génération des suggestions.</p>
-          <p>Scannez un nouveau repas pour relancer le processus.</p>
-          <button onClick={handleGoBack} style={{ 
-            padding: '10px 20px',
-            background: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginTop: '15px'
-          }}>
-            Retour à l'accueil
-          </button>
+          <p style={{ fontSize: '16px', marginBottom: '15px' }}>
+            Une erreur s'est produite lors de la génération des suggestions.
+          </p>
+          <p style={{ color: '#666', marginBottom: '25px' }}>
+            Assurez-vous d'avoir complété votre profil et scanné au moins un repas.
+          </p>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={handleGenerateSuggestions} style={{ 
+              padding: '10px 20px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}>
+              🔄 Réessayer la génération
+            </button>
+            <button onClick={() => router.push('/onboarding-new')} style={{ 
+              padding: '10px 20px',
+              background: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}>
+              Compléter mon profil
+            </button>
+            <button onClick={handleGoBack} style={{ 
+              padding: '10px 20px',
+              background: '#757575',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}>
+              Retour
+            </button>
+          </div>
         </div>
       );
     }
 
-    if (!motivationMessage && mealSuggestions.length === 0) {
+    if (!motivationMessage && mealSuggestions.length === 0 && suggestionStatus !== 'failed') {
       return (
         <div style={{ textAlign: 'center', padding: '50px', background: '#e3f2fd', borderRadius: '8px' }}>
-          <h2>📱 Aucune suggestion disponible</h2>
-          <p>Scannez votre premier repas pour recevoir des suggestions personnalisées !</p>
-          <button onClick={handleGoBack} style={{ 
-            padding: '10px 20px',
-            background: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginTop: '15px'
-          }}>
-            Scanner un repas
-          </button>
+          <h2>� Générer vos suggestions personnalisées</h2>
+          <p style={{ marginBottom: '20px' }}>
+            Nous sommes prêts à analyser votre profil et vos habitudes alimentaires pour vous proposer des suggestions personnalisées !
+          </p>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+            <button onClick={handleGenerateSuggestions} style={{ 
+              padding: '12px 24px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}>
+              ✨ Générer mes suggestions
+            </button>
+            <button onClick={handleGoBack} style={{ 
+              padding: '12px 24px',
+              background: '#757575',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}>
+              Retour
+            </button>
+          </div>
         </div>
       );
     }

@@ -1,0 +1,884 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f7;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  font-family: 'Quicksand', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Effet grain sur toute la page */
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  position: relative;
+  z-index: 10;
+}
+
+.backButton,
+.moreButton,
+.logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.backButton:active,
+.moreButton:active,
+.logoutButton:active {
+  transform: scale(0.95);
+}
+
+.logoutButton {
+  color: #e74c3c;
+}
+
+.logoutButton:hover {
+  color: #c0392b;
+}
+
+.profileIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+}
+
+/* Section TrueFocus Animation */
+.trueFocusSection {
+  padding: 2rem 1.5rem;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Main Content - Zone de scan */
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1.5rem 6rem;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+
+.scanPrompt {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 3/4;
+  background: white;
+  border-radius: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.focusFrame {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 4px solid #000;
+  filter: drop-shadow(0px 0px 8px rgba(0, 0, 0, 0.3));
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.topLeft {
+  top: -15px;
+  left: -15px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.topRight {
+  top: -15px;
+  right: -15px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.bottomLeft {
+  bottom: -15px;
+  left: -15px;
+  border-right: none;
+  border-top: none;
+}
+
+.bottomRight {
+  bottom: -15px;
+  right: -15px;
+  border-left: none;
+  border-top: none;
+}
+
+.scanText {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+.scanButton {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #66BB6A;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(102, 187, 106, 0.4);
+  transition: all 0.3s ease;
+}
+
+.scanButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(102, 187, 106, 0.5);
+}
+
+.scanButton:active {
+  transform: scale(0.95);
+}
+
+/* Camera View */
+.cameraView {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 3/4;
+  background: #000;
+  border-radius: 30px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scanOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.scanOverlay .focusFrame {
+  width: 250px;
+  height: 250px;
+}
+
+.closeCamera {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.closeCamera:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.closeCamera:active {
+  transform: scale(0.95);
+}
+
+/* Product Indicator */
+.productIndicator {
+  position: absolute;
+  bottom: 6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 20px;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 5;
+}
+
+.productIcon {
+  width: 40px;
+  height: 40px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.productInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.productLabel {
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: 500;
+}
+
+.productName {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 700;
+}
+
+.addProductButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #5B6EF5;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.addProductButton:hover {
+  transform: scale(1.1);
+}
+
+.addProductButton:active {
+  transform: scale(0.95);
+}
+
+/* Suggestion Card - Rectangle blanc qui apparaît au hover */
+.suggestionCard {
+  position: absolute;
+  bottom: 6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 20px;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 280px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.suggestionCard.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.suggestionCard.visible:hover {
+  transform: translateX(-50%) translateY(-4px);
+  box-shadow: 0 6px 24px rgba(102, 187, 106, 0.3);
+}
+
+.suggestionButton:active {
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.suggestionInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.suggestionName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.suggestionSubtext {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.suggestionArrow {
+  background: #f0f0f0;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #66BB6A;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.suggestionArrow:hover {
+  background: #66BB6A;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Footer Navigation - Style avec courbe verte vers le haut et bouton central */
+.footer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0;
+  background: #66BB6A;
+  border-top: none;
+  position: relative;
+  z-index: 10;
+  height: 70px;
+  margin-top: 40px;
+  overflow: visible;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 70px;
+  background: #f5f5f7;
+  z-index: 1;
+  border-radius: 0 0 55px 55px;
+}
+
+.navButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: white;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.navButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.navButton:active {
+  transform: scale(0.95);
+}
+
+.centerButton {
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 50%;
+  color: #66BB6A;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  top: -52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.centerButton svg {
+  display: block !important;
+  flex-shrink: 0;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.centerButton:hover {
+  background: #f5f5f5;
+  transform: translate(-50%, -12px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 375px) {
+  .scanPrompt {
+    aspect-ratio: 2/3;
+  }
+
+  .focusFrame {
+    width: 150px;
+    height: 150px;
+  }
+
+  .scanText {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .mainContent {
+    padding: 3rem 2rem;
+  }
+
+  .scanPrompt,
+  .cameraView {
+    max-width: 500px;
+  }
+}
+
+/* Button Group for Scan and Gallery */
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.galleryButton {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #5C6BC0;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(92, 107, 192, 0.4);
+  transition: all 0.3s ease;
+}
+
+.galleryButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(92, 107, 192, 0.5);
+}
+
+.galleryButton:active {
+  transform: scale(0.95);
+}
+
+/* Image Preview */
+.imagePreview {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 3/4;
+  background: #000;
+  border-radius: 30px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.selectedImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.closeImage {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.closeImage:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.closeImage:active {
+  transform: scale(0.95);
+}
+
+/* Analysis Container - Layout responsive */
+.analysisContainer {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+/* Desktop: côte à côte */
+@media (min-width: 768px) {
+  .analysisContainer {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .imageSection {
+    flex: 1;
+    max-width: 500px;
+  }
+  
+  .editPanel {
+    flex: 1;
+    max-width: 500px;
+  }
+}
+
+/* Image Section */
+.imageSection {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: #000;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.imageSection .selectedImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Edit Panel */
+.editPanel {
+  width: 100%;
+  background: white;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.editHeader {
+  margin-bottom: 1.5rem;
+}
+
+.editHeader h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #333;
+  font-weight: 700;
+}
+
+.editSubtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Aliment Edit List */
+.alimentEditList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding-right: 0.5rem;
+}
+
+/* Scrollbar personnalisée */
+.alimentEditList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alimentEditList::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.alimentEditList::-webkit-scrollbar-thumb {
+  background: #66BB6A;
+  border-radius: 10px;
+}
+
+.alimentEditItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f8f8;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.alimentEditItem:hover {
+  background: #f0f0f0;
+}
+
+.alimentNameInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: border-color 0.2s ease;
+}
+
+.alimentNameInput:focus {
+  outline: none;
+  border-color: #66BB6A;
+}
+
+.quantityControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alimentQuantityInput {
+  width: 80px;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.2s ease;
+}
+
+.alimentQuantityInput:focus {
+  outline: none;
+  border-color: #66BB6A;
+}
+
+.unit {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.deleteButton {
+  padding: 0.5rem;
+  background: #ffebee;
+  border: none;
+  border-radius: 8px;
+  color: #f44336;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background: #f44336;
+  color: white;
+  transform: scale(1.05);
+}
+
+.deleteButton:active {
+  transform: scale(0.95);
+}
+
+/* Edit Actions */
+.editActions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.addButton {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 2px solid #66BB6A;
+  color: #66BB6A;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.addButton:hover {
+  background: #f1f8f4;
+  transform: translateY(-2px);
+}
+
+.addButton:active {
+  transform: translateY(0);
+}
+
+.validateButton {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: #66BB6A;
+  border: none;
+  color: white;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.validateButton:hover:not(:disabled) {
+  background: #5cb660;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 187, 106, 0.4);
+}
+
+.validateButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.validateButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Disabled state for inputs and buttons */
+.alimentNameInput:disabled,
+.alimentQuantityInput:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.deleteButton:disabled,
+.addButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Analyzing Overlay */
+.analyzingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  border-radius: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #66BB6A;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.analyzingText {
+  color: white;
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}

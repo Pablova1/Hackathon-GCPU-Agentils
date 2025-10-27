@@ -203,16 +203,34 @@ export default function Onboarding() {
       case 'text':
       default:
         return (
-          <input
-            type="text"
+          <textarea
             value={value}
             onChange={(e) => handleAnswerChange(question.slot, e.target.value)}
-            style={styles.input}
+            style={{...styles.input, minHeight: '80px', resize: 'vertical'}}
             placeholder={question.placeholder || "Votre réponse..."}
             required={question.required}
           />
         );
     }
+  };
+
+  // Organiser les questions par sections
+  const organizeQuestions = (questions) => {
+    const sections = {
+      'Informations de base': ['birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType'],
+      'Nutrition': ['dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences'],
+      'Santé': ['treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl', 'birthControlName'],
+      'Objectifs': ['goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail'],
+      'Restrictions religieuses': ['religiousPracticing', 'religiousType'],
+      'Activité et mode de vie': ['activityLevel', 'sports', 'occupation', 'additionalNotes']
+    };
+
+    const organized = {};
+    Object.keys(sections).forEach(sectionName => {
+      organized[sectionName] = questions.filter(q => sections[sectionName].includes(q.slot));
+    });
+
+    return organized;
   };
 
   if (loading) {
@@ -225,6 +243,8 @@ export default function Onboarding() {
       </div>
     );
   }
+
+  const organizedQuestions = organizeQuestions(questions);
 
   return (
     <div style={styles.container}>
@@ -248,15 +268,21 @@ export default function Onboarding() {
         )}
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          {questions.map((question, index) => (
-            <div key={question.slot} style={styles.questionBlock}>
-              <label style={styles.questionLabel}>
-                <span style={styles.questionNumber}>{index + 1}.</span>
-                {question.text}
-                {question.required && <span style={styles.required}> *</span>}
-              </label>
-              {renderQuestionInput(question)}
-            </div>
+          {Object.entries(organizedQuestions).map(([sectionName, sectionQuestions]) => (
+            sectionQuestions.length > 0 && (
+              <div key={sectionName} style={styles.section}>
+                <h2 style={styles.sectionTitle}>{sectionName}</h2>
+                {sectionQuestions.map((question, index) => (
+                  <div key={question.slot} style={styles.questionBlock}>
+                    <label style={styles.questionLabel}>
+                      {question.text}
+                      {question.required && <span style={styles.required}> *</span>}
+                    </label>
+                    {renderQuestionInput(question)}
+                  </div>
+                ))}
+              </div>
+            )
           ))}
 
           <button 
@@ -286,7 +312,7 @@ const styles = {
     backgroundColor: 'white',
     borderRadius: '12px',
     padding: '40px',
-    maxWidth: '700px',
+    maxWidth: '800px',
     width: '100%',
     boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
     marginTop: '20px',
@@ -307,12 +333,27 @@ const styles = {
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '25px'
+    gap: '35px'
+  },
+  section: {
+    backgroundColor: '#fafafa',
+    borderRadius: '10px',
+    padding: '25px',
+    border: '1px solid #e0e0e0'
+  },
+  sectionTitle: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: '20px',
+    paddingBottom: '10px',
+    borderBottom: '2px solid #4CAF50'
   },
   questionBlock: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px'
+    gap: '10px',
+    marginBottom: '15px'
   },
   questionLabel: {
     fontSize: '16px',
@@ -357,7 +398,8 @@ const styles = {
     border: '2px solid #ddd',
     borderRadius: '8px',
     fontSize: '16px',
-    transition: 'border-color 0.2s'
+    transition: 'border-color 0.2s',
+    fontFamily: 'inherit'
   },
   submitButton: {
     marginTop: '20px',
