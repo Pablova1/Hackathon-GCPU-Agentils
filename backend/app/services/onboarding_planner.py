@@ -8,18 +8,10 @@ REQUIRED_SLOTS = [
     
     # Nutrition
     "dietType",
-    "allergies",
-    "intolerances",
     "foodLikes",
-    "foodDislikes",
-    "foodPreferences",
     
     # Santé
-    "treatments",
-    "medicalHistoryPersonal",
-    "medicalHistoryFamily",
     "birthControl",
-    "birthControlName",
     
     # Objectifs
     "goalMuscleGain",
@@ -30,12 +22,24 @@ REQUIRED_SLOTS = [
     
     # Restrictions religieuses
     "religiousPracticing",
-    "religiousType",
     
     # Activité et mode de vie
     "activityLevel",
-    "sports",
     "occupation",
+]
+
+# Questions optionnelles (non requises)
+OPTIONAL_SLOTS = [
+    "allergies",
+    "intolerances",
+    "foodDislikes",
+    "foodPreferences",
+    "treatments",
+    "medicalHistoryPersonal",
+    "medicalHistoryFamily",
+    "birthControlName",  # Conditionnelle : apparaît seulement si birthControl = "oui"
+    "religiousType",  # Conditionnelle : apparaît seulement si religiousPracticing = "oui"
+    "sports",
     "additionalNotes",
 ]
 
@@ -74,14 +78,14 @@ QUESTION_BANK = {
         "choices": ["omnivore", "vegetarian", "vegan", "halal", "kosher", "autre"]
     },
     "allergies": {
-        "text": "As-tu des allergies alimentaires ? (sépare par des virgules, ou écris 'aucune')", 
+        "text": "As-tu des allergies alimentaires ? (sépare par des virgules, laisse vide si aucune)", 
         "type": "text", 
-        "placeholder": "Ex: arachides, fruits de mer, aucune"
+        "placeholder": "Ex: arachides, fruits de mer"
     },
     "intolerances": {
-        "text": "As-tu des intolérances alimentaires ? (sépare par des virgules, ou écris 'aucune')", 
+        "text": "As-tu des intolérances alimentaires ? (sépare par des virgules, laisse vide si aucune)", 
         "type": "text", 
-        "placeholder": "Ex: lactose, gluten, aucune"
+        "placeholder": "Ex: lactose, gluten"
     },
     "foodLikes": {
         "text": "Quels aliments aimes-tu particulièrement ? (sépare par des virgules)", 
@@ -89,31 +93,31 @@ QUESTION_BANK = {
         "placeholder": "Ex: pâtes, poulet, légumes verts"
     },
     "foodDislikes": {
-        "text": "Quels aliments n'aimes-tu pas ? (sépare par des virgules, ou écris 'aucun')", 
+        "text": "Quels aliments n'aimes-tu pas ? (sépare par des virgules, laisse vide si aucun)", 
         "type": "text", 
-        "placeholder": "Ex: poisson, épinards, aucun"
+        "placeholder": "Ex: poisson, épinards"
     },
     "foodPreferences": {
-        "text": "Préférences générales (bio, local, etc.) ? (sépare par des virgules, ou écris 'aucune')", 
+        "text": "Préférences générales (bio, local, etc.) ? (sépare par des virgules, laisse vide si aucune)", 
         "type": "text", 
-        "placeholder": "Ex: bio, local, aucune"
+        "placeholder": "Ex: bio, local"
     },
     
     # ===== SANTÉ =====
     "treatments": {
-        "text": "Prends-tu des traitements médicaux ? (sépare par des virgules, ou écris 'aucun')", 
+        "text": "Prends-tu des traitements médicaux ? (sépare par des virgules, laisse vide si aucun)", 
         "type": "text", 
-        "placeholder": "Ex: Levothyrox 75mcg, aucun"
+        "placeholder": "Ex: Levothyrox 75mcg"
     },
     "medicalHistoryPersonal": {
-        "text": "As-tu des antécédents médicaux personnels ? (sépare par des virgules, ou écris 'aucun')", 
+        "text": "As-tu des antécédents médicaux personnels ? (sépare par des virgules, laisse vide si aucun)", 
         "type": "text", 
-        "placeholder": "Ex: diabète type 2, hypertension, aucun"
+        "placeholder": "Ex: diabète type 2, hypertension"
     },
     "medicalHistoryFamily": {
-        "text": "As-tu des antécédents médicaux familiaux ? (sépare par des virgules, ou écris 'aucun')", 
+        "text": "As-tu des antécédents médicaux familiaux ? (sépare par des virgules, laisse vide si aucun)", 
         "type": "text", 
-        "placeholder": "Ex: diabète, maladies cardiaques, aucun"
+        "placeholder": "Ex: diabète, maladies cardiaques"
     },
     "birthControl": {
         "text": "Utilises-tu un moyen de contraception ?", 
@@ -121,9 +125,9 @@ QUESTION_BANK = {
         "choices": ["oui", "non"]
     },
     "birthControlName": {
-        "text": "Si oui, lequel ? (sinon écris 'non applicable')", 
+        "text": "Lequel ?", 
         "type": "text", 
-        "placeholder": "Ex: pilule, stérilet, non applicable"
+        "placeholder": "Ex: pilule, stérilet"
     },
     
     # ===== OBJECTIFS =====
@@ -160,9 +164,9 @@ QUESTION_BANK = {
         "choices": ["oui", "non"]
     },
     "religiousType": {
-        "text": "Si oui, lesquelles ? (sinon écris 'non applicable')", 
+        "text": "Lesquelles ?", 
         "type": "text", 
-        "placeholder": "Ex: halal, casher, non applicable"
+        "placeholder": "Ex: halal, casher"
     },
     
     # ===== ACTIVITÉ ET MODE DE VIE =====
@@ -172,9 +176,9 @@ QUESTION_BANK = {
         "choices": ["low", "moderate", "high"]
     },
     "sports": {
-        "text": "Quels sports pratiques-tu ? (sépare par des virgules, ou écris 'aucun')", 
+        "text": "Quels sports pratiques-tu ? (sépare par des virgules, laisse vide si aucun)", 
         "type": "text", 
-        "placeholder": "Ex: course à pied, yoga, musculation, aucun"
+        "placeholder": "Ex: course à pied, yoga, musculation"
     },
     "occupation": {
         "text": "Quelle est ta profession ou occupation principale ?", 
@@ -198,10 +202,17 @@ def first_question() -> dict:
 def all_questions() -> list[dict]:
     """Retourne toutes les questions requises pour l'onboarding."""
     questions = []
+    # Questions obligatoires
     for slot in REQUIRED_SLOTS:
         q = dict(QUESTION_BANK[slot])  # copie
         q["slot"] = slot
         q["required"] = True
+        questions.append(q)
+    # Questions optionnelles
+    for slot in OPTIONAL_SLOTS:
+        q = dict(QUESTION_BANK[slot])  # copie
+        q["slot"] = slot
+        q["required"] = False
         questions.append(q)
     return questions
 

@@ -12,6 +12,7 @@ export default function Onboarding() {
   const [userId, setUserId] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showBodyTypeInfo, setShowBodyTypeInfo] = useState(null);
 
   // Vérifier l'authentification et charger les questions
   useEffect(() => {
@@ -115,6 +116,31 @@ export default function Onboarding() {
     }));
   };
 
+  const handleDateChange = (slot, value) => {
+    // Retirer tous les caractères non numériques
+    let cleaned = value.replace(/\D/g, '');
+    
+    // Limiter à 8 chiffres (JJMMAAAA)
+    cleaned = cleaned.substring(0, 8);
+    
+    // Formater avec des /
+    let formatted = '';
+    if (cleaned.length > 0) {
+      formatted = cleaned.substring(0, 2); // JJ
+      if (cleaned.length >= 3) {
+        formatted += '/' + cleaned.substring(2, 4); // MM
+      }
+      if (cleaned.length >= 5) {
+        formatted += '/' + cleaned.substring(4, 8); // AAAA
+      }
+    }
+    
+    setAnswers(prev => ({
+      ...prev,
+      [slot]: formatted
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -131,10 +157,15 @@ export default function Onboarding() {
       return;
     }
 
-    // Convertir les réponses au bon type
+    // Convertir les réponses au bon type et filtrer les réponses vides pour les questions optionnelles
     const processedAnswers = {};
     questions.forEach(q => {
       let value = answers[q.slot];
+      
+      // Si la question est optionnelle et la valeur est vide, ne pas l'inclure
+      if (!q.required && (!value || value === '')) {
+        return;
+      }
       
       if (q.type === 'number') {
         value = parseFloat(value);
@@ -187,6 +218,43 @@ export default function Onboarding() {
   const renderQuestionInput = (question) => {
     const value = answers[question.slot] || '';
 
+    // Cas spécial pour bodyType avec explications
+    if (question.slot === 'bodyType') {
+      const bodyTypeInfo = {
+        'ectomorphic': '🌿 Ectomorphe : Silhouette fine, métabolisme rapide, difficulté à prendre du poids',
+        'mesomorphic': '💪 Mésomorphe : Musculature naturelle, prise de muscle facile, morphologie athlétique',
+        'endomorphic': '🌰 Endomorphe : Structure plus large, prise de poids facile, métabolisme lent',
+        'unknown': '❓ Je ne sais pas'
+      };
+
+      return (
+        <div style={styles.choicesContainer}>
+          {question.choices.map((choice) => (
+            <div key={choice} style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+              <button
+                type="button"
+                onClick={() => handleAnswerChange(question.slot, choice)}
+                onMouseEnter={() => setShowBodyTypeInfo(choice)}
+                onMouseLeave={() => setShowBodyTypeInfo(null)}
+                style={{
+                  ...styles.choiceButton,
+                  ...(value === choice ? styles.choiceButtonSelected : {}),
+                  position: 'relative'
+                }}
+              >
+                {choice}
+              </button>
+              {showBodyTypeInfo === choice && (
+                <div style={styles.tooltip}>
+                  {bodyTypeInfo[choice]}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     switch (question.type) {
       case 'single_choice':
         return (
@@ -225,10 +293,11 @@ export default function Onboarding() {
           <input
             type="text"
             value={value}
-            onChange={(e) => handleAnswerChange(question.slot, e.target.value)}
+            onChange={(e) => handleDateChange(question.slot, e.target.value)}
             style={styles.input}
             placeholder={question.placeholder || "JJ/MM/AAAA"}
             required={question.required}
+            maxLength="10"
           />
         );
 
@@ -251,9 +320,9 @@ export default function Onboarding() {
     const sections = {
       'Informations de base': ['birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType'],
       'Nutrition': ['dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences'],
-      'Santé': ['treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl', 'birthControlName'],
+      'Santé': ['treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl'],
       'Objectifs': ['goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail'],
-      'Restrictions religieuses': ['religiousPracticing', 'religiousType'],
+      'Restrictions religieuses': ['religiousPracticing'],
       'Activité et mode de vie': ['activityLevel', 'sports', 'occupation', 'additionalNotes']
     };
 
@@ -263,6 +332,65 @@ export default function Onboarding() {
     });
 
     return organized;
+  };
+
+  // Fonction pour déterminer si une question doit être affichée
+  const shouldShowQuestion = (question) => {
+    // birthControlName et religiousType seront affichés inline, pas dans la liste normale
+    if (question.slot === 'birthControlName' || question.slot === 'religiousType') {
+      return false;
+    }
+    // Toutes les autres questions sont toujours affichées
+    return true;
+  };
+
+  // Fonction pour rendre une question avec ses questions conditionnelles
+  const renderQuestionBlock = (question, allQuestions) => {
+    return (
+      <div key={question.slot} style={styles.questionBlock}>
+        <label style={styles.questionLabel}>
+          {question.text}
+          {question.required && <span style={styles.required}> *</span>}
+        </label>
+        {renderQuestionInput(question)}
+        
+        {/* Question conditionnelle pour birthControl */}
+        {question.slot === 'birthControl' && answers['birthControl'] === 'oui' && (
+          <div style={styles.conditionalQuestion}>
+            {allQuestions
+              .filter(q => q.slot === 'birthControlName')
+              .map(subQuestion => (
+                <div key={subQuestion.slot} style={{ marginTop: '15px' }}>
+                  <label style={styles.questionLabel}>
+                    {subQuestion.text}
+                    {subQuestion.required && <span style={styles.required}> *</span>}
+                  </label>
+                  {renderQuestionInput(subQuestion)}
+                </div>
+              ))
+            }
+          </div>
+        )}
+        
+        {/* Question conditionnelle pour religiousPracticing */}
+        {question.slot === 'religiousPracticing' && answers['religiousPracticing'] === 'oui' && (
+          <div style={styles.conditionalQuestion}>
+            {allQuestions
+              .filter(q => q.slot === 'religiousType')
+              .map(subQuestion => (
+                <div key={subQuestion.slot} style={{ marginTop: '15px' }}>
+                  <label style={styles.questionLabel}>
+                    {subQuestion.text}
+                    {subQuestion.required && <span style={styles.required}> *</span>}
+                  </label>
+                  {renderQuestionInput(subQuestion)}
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -322,13 +450,7 @@ export default function Onboarding() {
               <div key={sectionName} style={styles.section}>
                 <h2 style={styles.sectionTitle}>{sectionName}</h2>
                 {sectionQuestions.map((question, index) => (
-                  <div key={question.slot} style={styles.questionBlock}>
-                    <label style={styles.questionLabel}>
-                      {question.text}
-                      {question.required && <span style={styles.required}> *</span>}
-                    </label>
-                    {renderQuestionInput(question)}
-                  </div>
+                  shouldShowQuestion(question) && renderQuestionBlock(question, questions)
                 ))}
               </div>
             )
@@ -521,5 +643,35 @@ const styles = {
     height: '40px',
     animation: 'spin 1s linear infinite',
     margin: '0 auto 20px'
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginBottom: '10px',
+    padding: '12px 16px',
+    backgroundColor: '#333',
+    color: 'white',
+    borderRadius: '8px',
+    fontSize: '14px',
+    whiteSpace: 'nowrap',
+    zIndex: 1000,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    maxWidth: '300px',
+    whiteSpace: 'normal',
+    textAlign: 'center',
+    lineHeight: '1.4'
+  },
+  conditionalQuestion: {
+    marginTop: '15px',
+    paddingTop: '15px',
+    paddingLeft: '20px',
+    paddingRight: '10px',
+    paddingBottom: '10px',
+    borderLeft: '3px solid #4CAF50',
+    backgroundColor: '#f0f9f0',
+    borderRadius: '0 8px 8px 0'
   }
 };
+

@@ -142,7 +142,7 @@ export default function Auth() {
         
         // Rediriger vers l'onboarding après l'inscription
         setTimeout(() => {
-          router.push('/onboarding');
+          router.push('/onboarding-new');
         }, 1000);
       } else {
         // Gérer les erreurs de validation (422) et les erreurs métier (400)
