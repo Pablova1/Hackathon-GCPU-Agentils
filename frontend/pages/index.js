@@ -41,7 +41,7 @@ export default function Home() {
             const data = await response.json();
             if (!data.profile_completed) {
               // Profil non complété, rediriger vers l'onboarding
-              router.push('/onboarding');
+              router.push('/onboarding-new');
               return;
             }
           }
@@ -116,6 +116,11 @@ export default function Home() {
     
     // Rediriger vers la page d'authentification
     router.push('/auth');
+  };
+
+  const handleProfileClick = () => {
+    // Rediriger vers la page d'onboarding pour modifier les réponses
+    router.push('/onboarding-new');
   };
 
   const handleGalleryClick = () => {
@@ -260,12 +265,12 @@ export default function Home() {
     <div className={styles.container}>
       {/* Header avec profil */}
       <header className={styles.header}>
-        <div className={styles.profileIcon}>
+        <button className={styles.profileIcon} onClick={handleProfileClick} title="Modifier mon profil">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
             <circle cx="12" cy="8" r="4"/>
             <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
           </svg>
-        </div>
+        </button>
         <div style={{ width: '40px' }}></div>
         <button className={styles.logoutButton} onClick={handleLogout} title="Déconnexion">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

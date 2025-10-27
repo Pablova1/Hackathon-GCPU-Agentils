@@ -71,6 +71,19 @@
   align-items: center;
   justify-content: center;
   background: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.profileIcon:hover {
+  background: #e0e0e0;
+  border-color: #66BB6A;
+  transform: scale(1.05);
+}
+
+.profileIcon:active {
+  transform: scale(0.95);
 }
 
 /* Section TrueFocus Animation */

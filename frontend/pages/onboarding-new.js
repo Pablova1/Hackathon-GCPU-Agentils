@@ -11,6 +11,7 @@ export default function Onboarding() {
   const [success, setSuccess] = useState('');
   const [userId, setUserId] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Vérifier l'authentification et charger les questions
   useEffect(() => {
@@ -28,40 +29,71 @@ export default function Onboarding() {
       setUserId(storedUserId);
       setFirstName(storedFirstName || '');
 
-      // Vérifier si le profil est déjà complété
-      try {
-        const response = await fetch(`http://localhost:8000/api/profile/check?user_id=${storedUserId}`, {
-          headers: {
-            'Authorization': `Bearer ${sessionToken}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.profile_completed) {
-            // Profil déjà complété, rediriger vers la page principale
-            router.push('/');
-            return;
-          }
-        }
-      } catch (err) {
-        console.log('Erreur lors de la vérification du profil:', err);
-      }
-
       // Charger toutes les questions
       try {
         const questionsResponse = await fetch('http://localhost:8000/api/onboarding/questions');
         if (questionsResponse.ok) {
           const questionsData = await questionsResponse.json();
-          setQuestions(questionsData.questions);
+          
+          // Filtrer les questions de l'IA (qui commencent généralement par 'ai_' ou ne sont pas standards)
+          const standardSlots = [
+            'birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType',
+            'dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences',
+            'treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl', 'birthControlName',
+            'goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail',
+            'religiousPracticing', 'religiousType',
+            'activityLevel', 'sports', 'occupation', 'additionalNotes'
+          ];
+          
+          // Ne garder que les questions standards (pas les questions IA)
+          let filteredQuestions = questionsData.questions.filter(q => 
+            standardSlots.includes(q.slot)
+          );
+          
+          setQuestions(filteredQuestions);
           
           // Initialiser les réponses vides
           const initialAnswers = {};
-          questionsData.questions.forEach(q => {
+          filteredQuestions.forEach(q => {
             initialAnswers[q.slot] = '';
           });
-          setAnswers(initialAnswers);
+
+          // Essayer de charger les réponses existantes si le profil est complété
+          try {
+            const profileResponse = await fetch(`http://localhost:8000/api/profile/check?user_id=${storedUserId}`, {
+              headers: {
+                'Authorization': `Bearer ${sessionToken}`
+              }
+            });
+
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              console.log('Données de profil reçues:', profileData);
+              console.log('Réponses onboarding:', profileData.onboarding_responses);
+              
+              if (profileData.profile_completed && profileData.onboarding_responses) {
+                // Mode modification - charger les réponses existantes
+                setIsEditMode(true);
+                
+                // En mode modification, exclure la question "additionalNotes"
+                filteredQuestions = filteredQuestions.filter(q => q.slot !== 'additionalNotes');
+                setQuestions(filteredQuestions);
+                
+                let loadedCount = 0;
+                filteredQuestions.forEach(q => {
+                  if (profileData.onboarding_responses[q.slot]) {
+                    initialAnswers[q.slot] = profileData.onboarding_responses[q.slot];
+                    loadedCount++;
+                  }
+                });
+                console.log(`${loadedCount} réponses chargées depuis le profil`);
+              }
+            }
+          } catch (err) {
+            console.log('Impossible de charger les réponses existantes:', err);
+          }
           
+          setAnswers(initialAnswers);
           setLoading(false);
         } else {
           setError('Erreur lors du chargement des questions');
@@ -249,10 +281,27 @@ export default function Onboarding() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>🍽️ Complète ton profil</h1>
+        {isEditMode && (
+          <button 
+            onClick={() => router.push('/')} 
+            style={styles.backButton}
+            type="button"
+          >
+            ← Retour
+          </button>
+        )}
+        
+        <h1 style={styles.title}>
+          {isEditMode ? '✏️ Modifie ton profil' : '🍽️ Complète ton profil'}
+        </h1>
         
         {firstName && (
-          <p style={styles.greeting}>Bienvenue {firstName} ! Aide-nous à mieux te connaître 🎯</p>
+          <p style={styles.greeting}>
+            {isEditMode 
+              ? `${firstName}, tu peux modifier tes réponses ci-dessous 🎯` 
+              : `Bienvenue ${firstName} ! Aide-nous à mieux te connaître 🎯`
+            }
+          </p>
         )}
 
         {error && (
@@ -316,7 +365,25 @@ const styles = {
     width: '100%',
     boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
     marginTop: '20px',
-    marginBottom: '20px'
+    marginBottom: '20px',
+    position: 'relative'
+  },
+  backButton: {
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+    padding: '10px 20px',
+    backgroundColor: '#f5f5f5',
+    color: '#666',
+    border: '2px solid #e0e0e0',
+    borderRadius: '8px',
+    fontSize: '14px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    transition: 'all 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px'
   },
   title: {
     textAlign: 'center',
@@ -412,6 +479,21 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 'bold',
     transition: 'background-color 0.2s'
+  },
+  backButton: {
+    marginBottom: '20px',
+    padding: '10px 20px',
+    backgroundColor: 'transparent',
+    color: '#4CAF50',
+    border: '2px solid #4CAF50',
+    borderRadius: '8px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    transition: 'all 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px'
   },
   errorMessage: {
     padding: '15px',

@@ -181,6 +181,9 @@ async def submit_all_answers(request: AllAnswersRequest):
         else:
             update_data["religiousRestrictions"] = None
         
+        # Stocker aussi les réponses brutes pour permettre la modification ultérieure
+        update_data["onboarding_responses"] = request.answers
+        
         result = await users.update_one(
             {"user_id": request.user_id},
             {"$set": update_data}
