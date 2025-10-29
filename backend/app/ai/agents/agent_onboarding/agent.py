@@ -52,20 +52,47 @@ class OnboardingAgent:
             # Remonter 6 niveaux pour atteindre la racine du projet
             # agent.py -> agent_onboarding -> agents -> ai -> app -> backend -> PROJECT_ROOT
             env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
-            logger.debug(f"Chargement du .env depuis: {env_path}")
-            logger.debug(f"Fichier existe: {env_path.exists()}")
-            load_dotenv(dotenv_path=env_path, override=True)
+            logger.info(f"Loading .env from: {env_path}")
+            logger.info(f"File exists: {env_path.exists()}")
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=True)
+                logger.info(".env file loaded successfully")
+            else:
+                logger.warning(f".env file not found at {env_path}")
+                # Try also in backend folder
+                backend_env = Path(__file__).parent.parent.parent.parent.parent / ".env"
+                logger.info(f"Trying backend .env: {backend_env}")
+                if backend_env.exists():
+                    load_dotenv(dotenv_path=backend_env, override=True)
+                    logger.info("Loaded .env from backend folder")
+                else:
+                    logger.warning("No .env file found")
         
         # Récupération des variables d'environnement
         self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
         self.project_id = project_id or os.getenv('GCP_PROJECT_ID') or os.getenv('PROJECT_ID')
         self.region = region or os.getenv('GCP_REGION') or os.getenv('REGION', 'us-central1')
-        self.system_prompt = system_prompt or os.getenv('AI_SYSTEM_PROMPT') or self.DEFAULT_SYSTEM_PROMPT
+        
+        # Charger le system prompt avec un fallback
+        self.system_prompt = system_prompt or os.getenv('AI_SYSTEM_PROMPT')
+        if not self.system_prompt:
+            logger.warning("AI_SYSTEM_PROMPT not found in .env, using default prompt")
+            self.system_prompt = (
+                "You are a caring nutrition assistant who asks questions to get to know the user better. "
+                "Here is the user's current context: {context}. "
+                "Based on this information, ask ONE open-ended, relevant question to better understand "
+                "their eating habits, preferences, or health goals. "
+                "IMPORTANT: Ask ONLY ONE short, clear question. Do not answer 'NONE' unless there is truly nothing relevant to ask. "
+                "The question must be related to nutrition, health, or wellness. Be natural and conversational."
+            )
+        
         self.max_questions = max_questions
         
-        logger.debug(f"API Key chargée: {bool(self.api_key)}")
-        logger.debug(f"Project ID: {self.project_id}")
-        logger.debug(f"Region: {self.region}")
+        logger.info(f"API Key loaded: {bool(self.api_key)}")
+        logger.info(f"Project ID: {self.project_id}")
+        logger.info(f"Region: {self.region}")
+        logger.info(f"System Prompt loaded: {bool(self.system_prompt)}")
+        logger.debug(f"System Prompt preview: {self.system_prompt[:100]}...")
         
         if not self.api_key:
             raise ValueError(
