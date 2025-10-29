@@ -29,6 +29,9 @@ async def check_profile_status(user_id: str = Query(..., description="ID de l'ut
         "onboarding_responses": {...}  # Réponses d'onboarding pour permettre la modification
     }
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         from app.db.mongo_client import get_database
         
@@ -53,13 +56,18 @@ async def check_profile_status(user_id: str = Query(..., description="ID de l'ut
         
         # Si les réponses n'existent pas, les reconstruire depuis le profil existant
         if not onboarding_responses and user.get("profile_completed", False):
-            onboarding_responses = reconstruct_onboarding_responses(user)
-            
-            # Sauvegarder les réponses reconstruites pour les futures requêtes
-            await users_collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"onboarding_responses": onboarding_responses}}
-            )
+            try:
+                onboarding_responses = reconstruct_onboarding_responses(user)
+                
+                # Sauvegarder les réponses reconstruites pour les futures requêtes
+                await users_collection.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"onboarding_responses": onboarding_responses}}
+                )
+            except Exception as reconstruct_error:
+                logger.error(f"Erreur lors de la reconstruction des réponses d'onboarding: {reconstruct_error}", exc_info=True)
+                # Continuer sans les réponses reconstruites
+                onboarding_responses = {}
         
         return {
             "profile_completed": user.get("profile_completed", False),
@@ -68,6 +76,7 @@ async def check_profile_status(user_id: str = Query(..., description="ID de l'ut
             "onboarding_responses": onboarding_responses
         }
     except Exception as e:
+        logger.error(f"Erreur dans check_profile_status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")
 
 @router.post("/start")

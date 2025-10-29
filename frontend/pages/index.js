@@ -93,8 +93,8 @@ export default function Home() {
   }, []);
 
   const handleMenuClick = () => {
-    // Navigation vers menu/historique
-    console.log('Menu clicked');
+    // Navigation vers la page des statistiques
+    router.push('/home');
   };
 
   const handleAddClick = () => {

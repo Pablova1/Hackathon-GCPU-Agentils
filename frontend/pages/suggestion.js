@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import styles from '../styles/Suggestion.module.css';
 
 export default function Suggestion() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function Suggestion() {
   const [generatedAt, setGeneratedAt] = useState(null);
   const [profileComplete, setProfileComplete] = useState(true);
 
-  // Vérifier l'authentification au chargement
+  // Check authentication on load
   useEffect(() => {
     const token = localStorage.getItem('session_token');
     const user_id = localStorage.getItem('user_id');
@@ -28,8 +29,8 @@ export default function Suggestion() {
       setSessionToken(token);
       setUserId(user_id);
       setFirstName(first || '');
-      setLastName(last || 'Utilisateur');
-      // Charger les suggestions depuis la DB
+      setLastName(last || 'User');
+      // Load suggestions from DB
       fetchSuggestionsFromDB(user_id);
     }
   }, [router]);
@@ -73,21 +74,21 @@ export default function Suggestion() {
         console.log('Profile is complete!'); // Debug
       }
       
-      // Récupérer la motivation
+      // Get motivation
       const motivationRes = await fetch(`http://localhost:8000/api/suggestions/motivation/${user_id}`);
       if (!motivationRes.ok) {
         throw new Error(`HTTP error! status: ${motivationRes.status}`);
       }
       const motivationData = await motivationRes.json();
       
-      // Récupérer les repas
+      // Get meals
       const mealsRes = await fetch(`http://localhost:8000/api/suggestions/meals/${user_id}`);
       if (!mealsRes.ok) {
         throw new Error(`HTTP error! status: ${mealsRes.status}`);
       }
       const mealsData = await mealsRes.json();
       
-      // Mettre à jour l'état
+      // Update state
       setMotivationMessage(motivationData.motivation_message || '');
       setMealSuggestions(mealsData.meal_suggestions || []);
       setSuggestionStatus(motivationData.status || mealsData.status || '');
@@ -124,16 +125,16 @@ export default function Suggestion() {
       });
       
       if (!response.ok) {
-        throw new Error('Erreur lors du déclenchement de la génération');
+        throw new Error('Error triggering generation');
       }
       
-      // Attendre quelques secondes puis rafraîchir
+      // Wait a few seconds then refresh
       setTimeout(() => {
         fetchSuggestionsFromDB(userId);
       }, 3000);
       
     } catch (err) {
-      console.error('Erreur:', err);
+      console.error('Error:', err);
       setError(err.message);
       setLoading(false);
     }
@@ -144,65 +145,59 @@ export default function Suggestion() {
   };
 
   if (!sessionToken || !userId) {
-    return <div style={{ padding: '20px' }}>Chargement...</div>;
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!profileComplete) {
     return (
-      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '50px', background: '#fff3cd', borderRadius: '8px' }}>
-          <h2 style={{ color: '#ff6f00', marginBottom: '20px' }}>⚠️ Profil incomplet</h2>
-          <p style={{ fontSize: '18px', marginBottom: '15px' }}>
-            Pour recevoir des suggestions personnalisées, vous devez d'abord compléter votre profil !
-          </p>
-          <p style={{ marginBottom: '30px', color: '#666' }}>
-            Nous avons besoin de connaître votre âge, poids, taille et vos objectifs pour vous proposer 
-            des repas adaptés à vos besoins.
-          </p>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-            <button onClick={() => router.push('/onboarding-new')} style={{ 
-              padding: '12px 24px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold'
-            }}>
-              Compléter mon profil
-            </button>
-            <button onClick={handleGoBack} style={{ 
-              padding: '12px 24px',
-              background: '#757575',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}>
-              Retour
-            </button>
-          </div>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <button className={styles.backButton} onClick={handleGoBack}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <h1 className={styles.title}>My Suggestions</h1>
+          <div className={styles.placeholder}></div>
         </div>
+
+        <main className={styles.main}>
+          <div className={styles.warningCard}>
+            <div className={styles.warningIcon}>⚠️</div>
+            <h2>Incomplete Profile</h2>
+            <p className={styles.warningText}>
+              To receive personalized suggestions, you need to complete your profile first!
+            </p>
+            <p className={styles.warningSubtext}>
+              We need to know your age, weight, height and goals to suggest meals adapted to your needs.
+            </p>
+            <div className={styles.buttonGroup}>
+              <button className={styles.primaryButton} onClick={() => router.push('/onboarding-new')}>
+                Complete my profile
+              </button>
+              <button className={styles.secondaryButton} onClick={handleGoBack}>
+                Back
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <div style={{ 
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #2196F3',
-            borderRadius: '50%',
-            width: '50px',
-            height: '50px',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          <p>Chargement des suggestions...</p>
+      <div className={styles.container}>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p>Loading suggestions...</p>
         </div>
       </div>
     );
@@ -210,51 +205,28 @@ export default function Suggestion() {
 
   if (error) {
     return (
-      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <h2 style={{ color: '#f44336' }}>Erreur</h2>
+      <div className={styles.container}>
+        <div className={styles.error}>
+          <h2>Error</h2>
           <p>{error}</p>
-          <button onClick={handleRefresh} style={{ 
-            padding: '10px 20px',
-            background: '#2196F3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
-            Réessayer
+          <button className={styles.primaryButton} onClick={handleRefresh}>
+            Try again
           </button>
         </div>
       </div>
     );
   }
 
-  // Gérer les différents statuts
+  // Render content based on status
   const renderContent = () => {
     if (suggestionStatus === 'generating') {
       return (
-        <div style={{ textAlign: 'center', padding: '50px', background: '#fff3cd', borderRadius: '8px' }}>
-          <div style={{ 
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #ff9800',
-            borderRadius: '50%',
-            width: '50px',
-            height: '50px',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          <h2>⏳ Génération en cours...</h2>
-          <p>Vos suggestions personnalisées sont en cours de création. Cela peut prendre quelques instants.</p>
-          <button onClick={handleRefresh} style={{ 
-            padding: '10px 20px',
-            background: '#2196F3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginTop: '15px'
-          }}>
-            🔄 Rafraîchir
+        <div className={styles.statusCard}>
+          <div className={styles.spinner}></div>
+          <h2>⏳ Generating...</h2>
+          <p>Your personalized suggestions are being created. This may take a few moments.</p>
+          <button className={styles.secondaryButton} onClick={handleRefresh}>
+            🔄 Refresh
           </button>
         </div>
       );
@@ -262,45 +234,21 @@ export default function Suggestion() {
 
     if (suggestionStatus === 'failed') {
       return (
-        <div style={{ textAlign: 'center', padding: '50px', background: '#ffebee', borderRadius: '8px' }}>
-          <h2 style={{ color: '#f44336' }}>❌ Erreur de génération</h2>
-          <p style={{ fontSize: '16px', marginBottom: '15px' }}>
-            Une erreur s'est produite lors de la génération des suggestions.
+        <div className={styles.errorCard}>
+          <h2>❌ Generation Error</h2>
+          <p>An error occurred while generating suggestions.</p>
+          <p className={styles.errorSubtext}>
+            Make sure you have completed your profile and scanned at least one meal.
           </p>
-          <p style={{ color: '#666', marginBottom: '25px' }}>
-            Assurez-vous d'avoir complété votre profil et scanné au moins un repas.
-          </p>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={handleGenerateSuggestions} style={{ 
-              padding: '10px 20px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}>
-              🔄 Réessayer la génération
+          <div className={styles.buttonGroup}>
+            <button className={styles.primaryButton} onClick={handleGenerateSuggestions}>
+              🔄 Try again
             </button>
-            <button onClick={() => router.push('/onboarding-new')} style={{ 
-              padding: '10px 20px',
-              background: '#2196F3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              Compléter mon profil
+            <button className={styles.secondaryButton} onClick={() => router.push('/onboarding-new')}>
+              Complete my profile
             </button>
-            <button onClick={handleGoBack} style={{ 
-              padding: '10px 20px',
-              background: '#757575',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              Retour
+            <button className={styles.secondaryButton} onClick={handleGoBack}>
+              Back
             </button>
           </div>
         </div>
@@ -309,34 +257,17 @@ export default function Suggestion() {
 
     if (!motivationMessage && mealSuggestions.length === 0 && suggestionStatus !== 'failed') {
       return (
-        <div style={{ textAlign: 'center', padding: '50px', background: '#e3f2fd', borderRadius: '8px' }}>
-          <h2>� Générer vos suggestions personnalisées</h2>
-          <p style={{ marginBottom: '20px' }}>
-            Nous sommes prêts à analyser votre profil et vos habitudes alimentaires pour vous proposer des suggestions personnalisées !
+        <div className={styles.emptyCard}>
+          <h2>✨ Generate your personalized suggestions</h2>
+          <p>
+            We're ready to analyze your profile and eating habits to offer you personalized suggestions!
           </p>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-            <button onClick={handleGenerateSuggestions} style={{ 
-              padding: '12px 24px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold'
-            }}>
-              ✨ Générer mes suggestions
+          <div className={styles.buttonGroup}>
+            <button className={styles.primaryButton} onClick={handleGenerateSuggestions}>
+              ✨ Generate my suggestions
             </button>
-            <button onClick={handleGoBack} style={{ 
-              padding: '12px 24px',
-              background: '#757575',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}>
-              Retour
+            <button className={styles.secondaryButton} onClick={handleGoBack}>
+              Back
             </button>
           </div>
         </div>
@@ -345,21 +276,14 @@ export default function Suggestion() {
 
     return (
       <>
-        {/* Message de motivation */}
+        {/* Motivation message */}
         {motivationMessage && (
-          <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            padding: '30px',
-            borderRadius: '12px',
-            marginBottom: '30px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 15px 0', fontSize: '24px' }}>💪 Votre motivation du jour</h2>
-            <p style={{ margin: '0', fontSize: '18px', lineHeight: '1.6' }}>{motivationMessage}</p>
+          <div className={styles.motivationCard}>
+            <h2>💪 Your daily motivation</h2>
+            <p className={styles.motivationText}>{motivationMessage}</p>
             {generatedAt && (
-              <p style={{ margin: '15px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
-                Généré le {new Date(generatedAt).toLocaleDateString('fr-FR', {
+              <p className={styles.generatedDate}>
+                Generated on {new Date(generatedAt).toLocaleDateString('en-US', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
@@ -371,124 +295,75 @@ export default function Suggestion() {
           </div>
         )}
 
-        {/* Bouton rafraîchir */}
-        <div style={{ marginBottom: '20px', textAlign: 'right' }}>
-          <button onClick={handleRefresh} style={{ 
-            padding: '10px 20px',
-            background: '#2196F3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
-            🔄 Rafraîchir
+        {/* Refresh button */}
+        <div className={styles.refreshContainer}>
+          <button className={styles.refreshButton} onClick={handleRefresh}>
+            🔄 Refresh
           </button>
         </div>
 
-        {/* Suggestions de repas */}
+        {/* Meal suggestions */}
         {mealSuggestions.length > 0 && (
-          <div>
-            <h2 style={{ marginBottom: '20px' }}>🍽️ Vos suggestions de repas</h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-              gap: '20px' 
-            }}>
+          <div className={styles.suggestionsSection}>
+            <h2 className={styles.sectionTitle}>🍽️ Your meal suggestions</h2>
+            <div className={styles.mealsGrid}>
               {mealSuggestions.map((meal, index) => (
-                <div key={index} style={{
-                  background: 'white',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                  <div style={{ marginBottom: '15px' }}>
-                    <h3 style={{ margin: '0 0 5px 0', color: '#333' }}>
-                      {meal.meal_name || `Repas ${index + 1}`}
-                    </h3>
+                <div key={index} className={styles.mealCard}>
+                  <div className={styles.mealHeader}>
+                    <h3>{meal.meal_name || `Meal ${index + 1}`}</h3>
                     {meal.meal_type && (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        background: '#e3f2fd',
-                        color: '#1976d2',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {meal.meal_type}
-                      </span>
+                      <span className={styles.mealType}>{meal.meal_type}</span>
                     )}
                   </div>
 
                   {meal.description && (
-                    <p style={{ color: '#666', marginBottom: '15px', lineHeight: '1.5' }}>
-                      {meal.description}
-                    </p>
+                    <p className={styles.mealDescription}>{meal.description}</p>
                   )}
 
                   {meal.macros && (
-                    <div style={{
-                      background: '#f5f5f5',
-                      padding: '15px',
-                      borderRadius: '6px',
-                      marginBottom: '15px'
-                    }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>Calories</div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff5722' }}>
-                            {meal.macros.calories || 0} kcal
-                          </div>
+                    <div className={styles.macrosContainer}>
+                      <div className={styles.macroItem}>
+                        <div className={styles.macroLabel}>Calories</div>
+                        <div className={`${styles.macroValue} ${styles.calories}`}>
+                          {meal.macros.calories || 0} kcal
                         </div>
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>Protéines</div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#4CAF50' }}>
-                            {meal.macros.proteins || 0}g
-                          </div>
+                      </div>
+                      <div className={styles.macroItem}>
+                        <div className={styles.macroLabel}>Protein</div>
+                        <div className={`${styles.macroValue} ${styles.protein}`}>
+                          {meal.macros.proteins || 0}g
                         </div>
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>Glucides</div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2196F3' }}>
-                            {meal.macros.carbs || 0}g
-                          </div>
+                      </div>
+                      <div className={styles.macroItem}>
+                        <div className={styles.macroLabel}>Carbs</div>
+                        <div className={`${styles.macroValue} ${styles.carbs}`}>
+                          {meal.macros.carbs || 0}g
                         </div>
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>Lipides</div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff9800' }}>
-                            {meal.macros.fats || 0}g
-                          </div>
+                      </div>
+                      <div className={styles.macroItem}>
+                        <div className={styles.macroLabel}>Fats</div>
+                        <div className={`${styles.macroValue} ${styles.fats}`}>
+                          {meal.macros.fats || 0}g
                         </div>
                       </div>
                     </div>
                   )}
 
                   {meal.ingredients && meal.ingredients.length > 0 && (
-                    <div style={{ marginBottom: '15px' }}>
-                      <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#333' }}>
-                        Ingrédients :
-                      </h4>
-                      <ul style={{ margin: 0, paddingLeft: '20px', color: '#666' }}>
+                    <div className={styles.ingredientsContainer}>
+                      <h4>Ingredients:</h4>
+                      <ul>
                         {meal.ingredients.map((ingredient, idx) => (
-                          <li key={idx} style={{ marginBottom: '5px' }}>{ingredient}</li>
+                          <li key={idx}>{ingredient}</li>
                         ))}
                       </ul>
                     </div>
                   )}
 
                   {meal.preparation_tips && (
-                    <div style={{
-                      background: '#e8f5e9',
-                      padding: '12px',
-                      borderRadius: '6px',
-                      borderLeft: '3px solid #4CAF50'
-                    }}>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#2e7d32' }}>
-                        💡 Conseils de préparation
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#1b5e20', lineHeight: '1.5' }}>
-                        {meal.preparation_tips}
-                      </p>
+                    <div className={styles.tipsContainer}>
+                      <h4>💡 Preparation tips</h4>
+                      <p>{meal.preparation_tips}</p>
                     </div>
                   )}
                 </div>
@@ -501,42 +376,45 @@ export default function Suggestion() {
   };
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className={styles.container}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Mes Suggestions Personnalisées</h1>
-          <p style={{ color: '#666', marginTop: '5px' }}>
-            Basées sur votre historique alimentaire
-          </p>
+      <div className={styles.header}>
+        <button className={styles.backButton} onClick={handleGoBack}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div className={styles.headerContent}>
+          <h1 className={styles.title}>My Personalized Suggestions</h1>
+          <p className={styles.subtitle}>Based on your eating history</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span>Bonjour, {firstName} {lastName}!</span>
-          <button onClick={handleGoBack} style={{ 
-            padding: '8px 16px',
-            background: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
-            ← Retour
-          </button>
-          <button onClick={handleLogout} style={{ 
-            padding: '8px 16px',
-            background: '#f44336',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
-            Déconnexion
-          </button>
-        </div>
+        <button className={styles.logoutButton} onClick={handleLogout} title="Logout">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Contenu principal */}
-      {renderContent()}
+      {/* Main content */}
+      <main className={styles.main}>
+        {renderContent()}
+      </main>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -27,23 +27,7 @@ class OnboardingAgent:
     Utilise Google Gemini via Vertex AI pour analyser le contexte utilisateur
     et suggérer des questions de suivi pertinentes.
     """
-    
-    DEFAULT_SYSTEM_PROMPT = """Tu es un assistant nutritionniste bienveillant qui pose des questions pour mieux connaître l'utilisateur.
-    Voici le contexte actuel de l'utilisateur :
-    
-    {context}
-    
-    Sur la base de ces informations, pose UNE question ouverte et pertinente pour mieux comprendre ses habitudes alimentaires, 
-    ses préférences ou ses objectifs de santé. 
-    
-    IMPORTANT:
-    - Pose SEULEMENT UNE question courte et claire
-    - Ne réponds pas "AUCUNE" sauf si vraiment rien de pertinent à demander
-    - La question doit être en lien avec la nutrition, la santé ou le bien-être
-    - Sois naturel et conversationnel
-    
-    Ta question :"""
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,

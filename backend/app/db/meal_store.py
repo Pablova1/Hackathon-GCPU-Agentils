@@ -291,13 +291,13 @@ async def get_home_stats(user_id: str) -> dict:
             logger.warning(f"L'agent a retourné None pour user {user_id}, utilisation du score par défaut")
             weekly_score = {
                 "score": 3.0,
-                "comment": "Impossible de calculer le score pour le moment. Réessaye plus tard !"
+                "comment": "Unable to calculate score at the moment. Try again later!"
             }
     except Exception as e:
         logger.error(f"Erreur lors du calcul du score hebdomadaire: {e}", exc_info=True)
         weekly_score = {
             "score": 3.0,
-            "comment": "Erreur lors du calcul du score. Continue de scanner tes plats !"
+            "comment": "Error calculating score. Keep scanning your meals!"
         }
     
     return {
