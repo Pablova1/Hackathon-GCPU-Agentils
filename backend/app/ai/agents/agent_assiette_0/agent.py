@@ -1,5 +1,5 @@
 """
-Agent d'analyse de composition d'assiettes utilisant Google Gemini via Vertex AI.
+Agent d'analyse de composition d'assiettes utilisant Google Gemini API.
 """
 
 import os
@@ -9,8 +9,7 @@ from typing import Dict, List, Optional, Union
 from pathlib import Path
 from dotenv import load_dotenv
 from PIL import Image
-from vertexai.generative_models import GenerativeModel, Part
-import vertexai
+import google.generativeai as genai
 
 
 # Configuration du logging
@@ -49,17 +48,15 @@ class FoodAnalyzerAgent:
     
     def __init__(
         self,
-        project_id: Optional[str] = None,
-        location: Optional[str] = None,
-        model_name: str = "gemini-2.0-flash-001",
+        api_key: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-exp",
         load_env: bool = True
     ):
         """
         Initialise l'agent d'analyse alimentaire.
         
         Args:
-            project_id: Google Cloud Project ID
-            location: Google Cloud Location (e.g., 'europe-west4')
+            api_key: Google API Key
             model_name: Nom du modèle Gemini à utiliser
             load_env: Si True, charge les variables d'environnement depuis .env
         """
@@ -69,24 +66,21 @@ class FoodAnalyzerAgent:
             env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        # Configuration Vertex AI
-        self.project_id = project_id or os.getenv('GCP_PROJECT_ID')
-        self.location = location or os.getenv('GCP_LOCATION', 'us-central1')
+        # Configuration API
+        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
         
-        if not self.project_id:
+        if not self.api_key:
             raise ValueError(
-                "GCP_PROJECT_ID manquant. "
-                "Définissez GCP_PROJECT_ID dans .env"
+                "GOOGLE_API_KEY manquant. "
+                "Définissez GOOGLE_API_KEY dans .env"
             )
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
+        # Configurer l'API Gemini
+        genai.configure(api_key=self.api_key)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(model_name)
         
-        logger.info(f"FoodAnalyzerAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
-        
+        logger.info(f"FoodAnalyzerAgent initialisé avec le modèle {model_name}")
         logger.info(f"Agent initialisé avec le modèle {model_name}")
     
     def _load_image(self, image_path: Union[str, Path]) -> Image.Image:
@@ -109,7 +103,7 @@ class FoodAnalyzerAgent:
     
     def _call_gemini_vision(self, prompt: str, image_path: Union[str, Path]) -> str:
         """
-        Appelle Vertex AI Gemini avec une image.
+        Appelle l'API Gemini avec une image.
         
         Args:
             prompt: Le prompt à envoyer
@@ -119,17 +113,13 @@ class FoodAnalyzerAgent:
             La réponse de l'IA
         """
         try:
-            # Charger l'image en bytes
-            with open(image_path, 'rb') as f:
-                image_bytes = f.read()
-            
-            # Créer un Part pour l'image à partir des bytes
-            image_part = Part.from_data(data=image_bytes, mime_type="image/jpeg")
+            # Charger l'image avec PIL
+            image = Image.open(image_path)
             
             # Générer la réponse
-            logger.debug(f"Appel Vertex AI Gemini avec l'image {image_path}")
+            logger.debug(f"Appel API Gemini avec l'image {image_path}")
             response = self.model.generate_content(
-                [prompt, image_part],
+                [prompt, image],
                 generation_config={
                     "temperature": 0.4,
                     "max_output_tokens": 2048,
@@ -139,13 +129,13 @@ class FoodAnalyzerAgent:
             )
             
             text = response.text.strip()
-            logger.debug(f"Réponse Vertex AI: {text[:100]}...")
+            logger.debug(f"Réponse API: {text[:100]}...")
             
             return text
             
         except Exception as e:
-            logger.error(f"Erreur lors de l'appel à Vertex AI: {e}")
-            raise Exception(f"Erreur Vertex AI: {str(e)}")
+            logger.error(f"Erreur lors de l'appel à l'API Gemini: {e}")
+            raise Exception(f"Erreur API Gemini: {str(e)}")
     
     def _parse_response(self, response_text: str) -> Dict:
         """

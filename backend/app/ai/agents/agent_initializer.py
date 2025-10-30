@@ -33,8 +33,7 @@ def get_food_analyzer() -> FoodAnalyzerAgent:
     if _food_analyzer is None:
         try:
             _food_analyzer = FoodAnalyzerAgent(
-                project_id=settings.GCP_PROJECT_ID,
-                location=settings.GCP_LOCATION,
+                api_key=settings.GOOGLE_API_KEY,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("FoodAnalyzerAgent initialisé")

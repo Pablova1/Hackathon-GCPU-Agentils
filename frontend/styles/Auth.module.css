@@ -2,9 +2,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: 20px;
+  padding: 0;
+  padding-top: 60px;
   font-family: 'Quicksand', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: background 0.5s ease;
   position: relative;
@@ -13,11 +14,26 @@
 .logoContainer {
   position: relative;
   z-index: 2;
-  margin-bottom: 40px;
-  margin-top: 20px;
   animation: fadeIn 0.8s ease;
   width: 100%;
-  max-width: 200px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  margin-bottom: 0;
+}
+
+.logoContainer img {
+  width: 140px !important;
+  height: 140px !important;
+  max-width: 140px;
+  max-height: 140px;
+}
+
+/* Logo blanc pour la page login */
+.logoContainer[data-tab="login"] img {
+  filter: brightness(0) invert(1);
 }
 
 @keyframes fadeIn {
@@ -60,18 +76,19 @@
 }
 
 .container[data-tab="login"]::before {
-  opacity: 0.65;
+  display: none;
 }
 
 .card {
   border-radius: 30px 30px 20px 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   max-width: 420px;
-  width: 100%;
+  width: calc(100% - 40px);
   overflow: hidden;
   transition: all 0.5s ease;
   position: relative;
   z-index: 1;
+  margin-top: 20px;
 }
 
 /* Card blanche pour register */
@@ -82,7 +99,7 @@
 
 /* Card verte pour login */
 .card[data-tab="login"] {
-  background: #ffffff;
+  background: #66BB6A;
   border: none;
 }
 
@@ -146,14 +163,14 @@
 
 /* Quand on est sur register (fond blanc de la page) */
 .tabs[data-tab="register"] .tab {
-  background: #ffffff;
-  color: #666;
+  background: #66BB6A;
+  color: white;
   border: none;
 }
 
 .tabs[data-tab="register"] .tab.active {
-  background: #66BB6A;
-  color: white;
+  background: #ffffff;
+  color: #666;
   transform: scale(1.05);
   border: none;
   box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
@@ -207,7 +224,7 @@
 
 /* Labels blancs pour login */
 .formGroup[data-tab="login"] label {
-  color: #2E7D32;
+  color: #ffffff;
 }
 
 .formGroup input {
@@ -235,14 +252,15 @@
 
 /* Inputs pour login */
 .formGroup[data-tab="login"] input {
-  border-color: #4CAF50;
+  border-color: #ffffff;
   color: #333;
+  background: #ffffff;
 }
 
 .formGroup[data-tab="login"] input:focus {
   outline: none;
-  border-color: #2E7D32;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
 .formGroup input::placeholder {
@@ -262,30 +280,31 @@
   letter-spacing: 0.5px;
 }
 
-/* Bouton pour register (vert uni sans bordure) */
+/* Bouton pour register (vert) */
 .submitButton[data-tab="register"] {
   background: #66BB6A;
   color: white;
-  border: none;
+  border: 2px solid #66BB6A;
 }
 
 .submitButton[data-tab="register"]:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+  background: #4CAF50;
 }
 
-/* Bouton pour login (blanc avec bordure verte) */
+/* Bouton pour login (vert) */
 .submitButton[data-tab="login"] {
-  background: white;
-  color: #2E7D32;
-  border: 3px solid #66BB6A;
+  background: #66BB6A;
+  color: white;
+  border: 3px solid white;
 }
 
 .submitButton[data-tab="login"]:hover {
-  background: #66BB6A;
-  color: white;
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.3);
+  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+  background: #4CAF50;
+  border: 3px solid white;
 }
 
 .submitButton:active {

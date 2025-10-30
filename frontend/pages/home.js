@@ -1,35 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../utils/api';
+import NavigationFooter from '../components/NavigationFooter';
 import styles from '../styles/Home.module.css';
 
 export default function Home() {
   const router = useRouter();
+  const { isAuthenticated, isLoading, userId } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchStats = async () => {
-      const userId = localStorage.getItem('user_id');
-      const token = localStorage.getItem('session_token');
+      if (isLoading) return;
 
-      if (!userId || !token) {
-        router.push('/auth');
+      if (!isAuthenticated || !userId) {
+        router.push('/welcome');
         return;
       }
 
       try {
-        const response = await fetch(`http://localhost:8000/api/meals/user/${userId}/home-stats`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Error loading statistics');
-        }
-
-        const data = await response.json();
+        const data = await apiClient.get(`/api/meals/user/${userId}/home-stats`);
         setStats(data);
       } catch (err) {
         console.error('Error fetching stats:', err);
@@ -40,7 +33,7 @@ export default function Home() {
     };
 
     fetchStats();
-  }, [router]);
+  }, [router, isAuthenticated, isLoading, userId]);
 
   const handleBackClick = () => {
     router.push('/');
@@ -200,12 +193,8 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className={styles.footer}>
-        <button className={styles.footerButton} onClick={handleBackClick}>
-          Back
-        </button>
-      </footer>
+      {/* Footer avec navigation */}
+      <NavigationFooter />
     </div>
   );
 }

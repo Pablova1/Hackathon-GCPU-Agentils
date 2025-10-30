@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../utils/api';
+import NavigationFooter from '../components/NavigationFooter';
 import styles from '../styles/Suggestion.module.css';
 
 export default function Suggestion() {
   const router = useRouter();
-  const [sessionToken, setSessionToken] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const { isAuthenticated, isLoading, userId, firstName, lastName, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [motivationMessage, setMotivationMessage] = useState('');
@@ -18,30 +18,18 @@ export default function Suggestion() {
 
   // Check authentication on load
   useEffect(() => {
-    const token = localStorage.getItem('session_token');
-    const user_id = localStorage.getItem('user_id');
-    const first = localStorage.getItem('first_name');
-    const last = localStorage.getItem('last_name');
+    if (isLoading) return;
     
-    if (!token || !user_id) {
-      router.push('/auth');
+    if (!isAuthenticated || !userId) {
+      router.push('/welcome');
     } else {
-      setSessionToken(token);
-      setUserId(user_id);
-      setFirstName(first || '');
-      setLastName(last || 'User');
       // Load suggestions from DB
-      fetchSuggestionsFromDB(user_id);
+      fetchSuggestionsFromDB(userId);
     }
-  }, [router]);
+  }, [router, isAuthenticated, isLoading, userId]);
 
   const handleLogout = () => {
-    localStorage.removeItem('session_token');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('first_name');
-    localStorage.removeItem('last_name');
-    localStorage.removeItem('email');
-    router.push('/auth');
+    logout();
   };
 
   const fetchSuggestionsFromDB = async (user_id) => {
@@ -50,43 +38,27 @@ export default function Suggestion() {
     
     try {
       // Vérifier d'abord si le profil est complet
-      const profileRes = await fetch(`http://localhost:8000/api/profile/check?user_id=${user_id}`, {
-        headers: {
-          'X-Session-Token': sessionToken
-        }
-      });
+      const profileData = await apiClient.get(`/api/profile/check?user_id=${user_id}`);
       
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        console.log('Profile data:', profileData); // Debug
-        
-        // Vérifier principalement avec profile_completed
-        // Si profile_completed est true, on considère le profil comme complet
-        const isProfileComplete = profileData.profile_completed === true;
-        
-        if (!isProfileComplete) {
-          console.log('Profile incomplete. profile_completed:', profileData.profile_completed); // Debug
-          setProfileComplete(false);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Profile is complete!'); // Debug
+      console.log('Profile data:', profileData); // Debug
+      
+      // Vérifier principalement avec profile_completed
+      const isProfileComplete = profileData.profile_completed === true;
+      
+      if (!isProfileComplete) {
+        console.log('Profile incomplete. profile_completed:', profileData.profile_completed); // Debug
+        setProfileComplete(false);
+        setLoading(false);
+        return;
       }
+      
+      console.log('Profile is complete!'); // Debug
       
       // Get motivation
-      const motivationRes = await fetch(`http://localhost:8000/api/suggestions/motivation/${user_id}`);
-      if (!motivationRes.ok) {
-        throw new Error(`HTTP error! status: ${motivationRes.status}`);
-      }
-      const motivationData = await motivationRes.json();
+      const motivationData = await apiClient.get(`/api/suggestions/motivation/${user_id}`);
       
       // Get meals
-      const mealsRes = await fetch(`http://localhost:8000/api/suggestions/meals/${user_id}`);
-      if (!mealsRes.ok) {
-        throw new Error(`HTTP error! status: ${mealsRes.status}`);
-      }
-      const mealsData = await mealsRes.json();
+      const mealsData = await apiClient.get(`/api/suggestions/meals/${user_id}`);
       
       // Update state
       setMotivationMessage(motivationData.motivation_message || '');
@@ -117,16 +89,7 @@ export default function Suggestion() {
     setSuggestionStatus('generating');
     
     try {
-      const response = await fetch(`http://localhost:8000/api/suggestions/trigger/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error triggering generation');
-      }
+      await apiClient.post(`/api/suggestions/trigger/${userId}`, {});
       
       // Wait a few seconds then refresh
       setTimeout(() => {
@@ -144,7 +107,7 @@ export default function Suggestion() {
     router.push('/');
   };
 
-  if (!sessionToken || !userId) {
+  if (!isAuthenticated || !userId) {
     return (
       <div className={styles.container}>
         <div className={styles.loading}>
@@ -401,6 +364,9 @@ export default function Suggestion() {
       <main className={styles.main}>
         {renderContent()}
       </main>
+
+      {/* Footer avec navigation */}
+      <NavigationFooter />
     </div>
   );
 }

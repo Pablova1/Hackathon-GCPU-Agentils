@@ -7,11 +7,11 @@ export default function Welcome() {
   const router = useRouter();
 
   const handleSignIn = () => {
-    router.push('/auth');
+    router.push('/auth?tab=register');
   };
 
   const handleLogIn = () => {
-    router.push('/auth');
+    router.push('/auth?tab=login');
   };
 
   return (

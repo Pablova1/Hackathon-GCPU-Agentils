@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../utils/api';
 
 export default function Onboarding() {
   const router = useRouter();
+  const { isAuthenticated, isLoading, userId, firstName, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [userId, setUserId] = useState(null);
-  const [firstName, setFirstName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [showBodyTypeInfo, setShowBodyTypeInfo] = useState(null);
   const [aiQuestion, setAiQuestion] = useState(null);
@@ -19,89 +20,71 @@ export default function Onboarding() {
   // Vérifier l'authentification et charger les questions
   useEffect(() => {
     const checkAuthAndLoadQuestions = async () => {
-      const sessionToken = localStorage.getItem('session_token');
-      const storedUserId = localStorage.getItem('user_id');
-      const storedFirstName = localStorage.getItem('first_name');
+      if (isLoading) return;
 
       // Si pas connecté, rediriger vers la page d'auth
-      if (!sessionToken || !storedUserId) {
+      if (!isAuthenticated || !userId) {
         router.push('/auth');
         return;
       }
 
-      setUserId(storedUserId);
-      setFirstName(storedFirstName || '');
-
       // Charger toutes les questions
       try {
-        const questionsResponse = await fetch('http://localhost:8000/api/onboarding/questions');
-        if (questionsResponse.ok) {
-          const questionsData = await questionsResponse.json();
-          
-          // Filtrer les questions de l'IA (qui commencent généralement par 'ai_' ou ne sont pas standards)
-          const standardSlots = [
-            'birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType',
-            'dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences',
-            'treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl', 'birthControlName',
-            'goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail',
-            'religiousPracticing', 'religiousType',
-            'activityLevel', 'sports', 'occupation', 'additionalNotes'
-          ];
-          
-          // Ne garder que les questions standards (pas les questions IA)
-          let filteredQuestions = questionsData.questions.filter(q => 
-            standardSlots.includes(q.slot)
-          );
-          
-          setQuestions(filteredQuestions);
-          
-          // Initialiser les réponses vides
-          const initialAnswers = {};
-          filteredQuestions.forEach(q => {
-            initialAnswers[q.slot] = '';
-          });
+        const questionsData = await apiClient.get('/api/onboarding/questions');
+        
+        // Filtrer les questions de l'IA (qui commencent généralement par 'ai_' ou ne sont pas standards)
+        const standardSlots = [
+          'birthDate', 'gender', 'heightCm', 'weightKg', 'bodyType',
+          'dietType', 'allergies', 'intolerances', 'foodLikes', 'foodDislikes', 'foodPreferences',
+          'treatments', 'medicalHistoryPersonal', 'medicalHistoryFamily', 'birthControl', 'birthControlName',
+          'goalMuscleGain', 'goalWeightLoss', 'goalPerformance', 'goalMaintainShape', 'goalDetail',
+          'religiousPracticing', 'religiousType',
+          'activityLevel', 'sports', 'occupation', 'additionalNotes'
+        ];
+        
+        // Ne garder que les questions standards (pas les questions IA)
+        let filteredQuestions = questionsData.questions.filter(q => 
+          standardSlots.includes(q.slot)
+        );
+        
+        setQuestions(filteredQuestions);
+        
+        // Initialiser les réponses vides
+        const initialAnswers = {};
+        filteredQuestions.forEach(q => {
+          initialAnswers[q.slot] = '';
+        });
 
-          // Essayer de charger les réponses existantes si le profil est complété
-          try {
-            const profileResponse = await fetch(`http://localhost:8000/api/profile/check?user_id=${storedUserId}`, {
-              headers: {
-                'Authorization': `Bearer ${sessionToken}`
+        // Essayer de charger les réponses existantes si le profil est complété
+        try {
+          const profileData = await apiClient.get(`/api/profile/check?user_id=${userId}`);
+          
+          console.log('Données de profil reçues:', profileData);
+          console.log('Réponses onboarding:', profileData.onboarding_responses);
+          
+          if (profileData.profile_completed && profileData.onboarding_responses) {
+            // Mode modification - charger les réponses existantes
+            setIsEditMode(true);
+            
+            // En mode modification, exclure la question "additionalNotes"
+            filteredQuestions = filteredQuestions.filter(q => q.slot !== 'additionalNotes');
+            setQuestions(filteredQuestions);
+            
+            let loadedCount = 0;
+            filteredQuestions.forEach(q => {
+              if (profileData.onboarding_responses[q.slot]) {
+                initialAnswers[q.slot] = profileData.onboarding_responses[q.slot];
+                loadedCount++;
               }
             });
-
-            if (profileResponse.ok) {
-              const profileData = await profileResponse.json();
-              console.log('Données de profil reçues:', profileData);
-              console.log('Réponses onboarding:', profileData.onboarding_responses);
-              
-              if (profileData.profile_completed && profileData.onboarding_responses) {
-                // Mode modification - charger les réponses existantes
-                setIsEditMode(true);
-                
-                // En mode modification, exclure la question "additionalNotes"
-                filteredQuestions = filteredQuestions.filter(q => q.slot !== 'additionalNotes');
-                setQuestions(filteredQuestions);
-                
-                let loadedCount = 0;
-                filteredQuestions.forEach(q => {
-                  if (profileData.onboarding_responses[q.slot]) {
-                    initialAnswers[q.slot] = profileData.onboarding_responses[q.slot];
-                    loadedCount++;
-                  }
-                });
-                console.log(`${loadedCount} réponses chargées depuis le profil`);
-              }
-            }
-          } catch (err) {
-            console.log('Impossible de charger les réponses existantes:', err);
+            console.log(`${loadedCount} réponses chargées depuis le profil`);
           }
-          
-          setAnswers(initialAnswers);
-          setLoading(false);
-        } else {
-          setError('Erreur lors du chargement des questions');
-          setLoading(false);
+        } catch (err) {
+          console.log('Impossible de charger les réponses existantes:', err);
         }
+        
+        setAnswers(initialAnswers);
+        setLoading(false);
       } catch (err) {
         setError('Erreur de connexion au serveur');
         setLoading(false);
@@ -109,7 +92,7 @@ export default function Onboarding() {
     };
 
     checkAuthAndLoadQuestions();
-  }, [router]);
+  }, [router, isAuthenticated, isLoading, userId]);
 
   const handleAnswerChange = (slot, value) => {
     setAnswers(prev => ({
@@ -189,39 +172,26 @@ export default function Onboarding() {
 
     // Soumettre toutes les réponses
     try {
-      const response = await fetch('http://localhost:8000/api/onboarding/submit-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          answers: processedAnswers
-        })
+      const data = await apiClient.post('/api/onboarding/submit-all', {
+        user_id: userId,
+        answers: processedAnswers
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Vérifier s'il y a une question IA à poser
-        if (data.ai_question) {
-          setAiQuestion(data.ai_question);
-          setSessionId(data.session_id);
-          setSuccess('Great! One more question to personalize your experience...');
-          setSubmitting(false);
-        } else {
-          // Pas de question IA, rediriger directement
-          setSuccess('Profile completed successfully! Redirecting...');
-          setTimeout(() => {
-            router.push('/');
-          }, 2000);
-        }
-      } else {
-        setError(data.detail || 'Error submitting profile');
+      // Vérifier s'il y a une question IA à poser
+      if (data.ai_question) {
+        setAiQuestion(data.ai_question);
+        setSessionId(data.session_id);
+        setSuccess('Great! One more question to personalize your experience...');
         setSubmitting(false);
+      } else {
+        // Pas de question IA, rediriger directement
+        setSuccess('Profile completed successfully! Redirecting...');
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
       }
     } catch (err) {
-      setError('Server connection error');
+      setError(err.data?.detail || err.message || 'Server connection error');
       setSubmitting(false);
     }
   };
@@ -239,38 +209,26 @@ export default function Onboarding() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/onboarding/answer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          slot: aiQuestion.slot,
-          value: aiAnswer
-        })
+      const data = await apiClient.post('/api/onboarding/answer', {
+        session_id: sessionId,
+        slot: aiQuestion.slot,
+        value: aiAnswer
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        if (data.next_question) {
-          // Il y a une autre question IA
-          setAiQuestion(data.next_question);
-          setAnswers(prev => ({...prev, [aiQuestion.slot]: ''})); // Effacer la réponse précédente
-          setSuccess('');
-        } else {
-          // Terminé, rediriger
-          setSuccess('All done! Redirecting...');
-          setTimeout(() => {
-            router.push('/');
-          }, 1500);
-        }
+      if (data.next_question) {
+        // Il y a une autre question IA
+        setAiQuestion(data.next_question);
+        setAnswers(prev => ({...prev, [aiQuestion.slot]: ''})); // Effacer la réponse précédente
+        setSuccess('');
       } else {
-        setError(data.detail || 'Error submitting answer');
+        // Terminé, rediriger
+        setSuccess('All done! Redirecting...');
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
       }
     } catch (err) {
-      setError('Server connection error');
+      setError(err.data?.detail || err.message || 'Server connection error');
     } finally {
       setSubmitting(false);
     }
@@ -477,15 +435,17 @@ export default function Onboarding() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {isEditMode && (
-          <button 
-            onClick={() => router.push('/')} 
-            style={styles.backButton}
-            type="button"
-          >
-            ← Back
-          </button>
-        )}
+        {/* Bouton retour qui déconnecte l'utilisateur */}
+        <button 
+          onClick={() => {
+            logout();
+            router.push('/auth');
+          }} 
+          style={styles.backButton}
+          type="button"
+        >
+          ← Logout
+        </button>
         
         <h1 style={styles.title}>
           {aiQuestion ? '🤖 One more thing...' : (isEditMode ? '✏️ Edit your profile' : '🍽️ Complete your profile')}

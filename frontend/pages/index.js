@@ -1,12 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
+import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../utils/api';
 import TrueFocus from '../components/TrueFocus';
+import NavigationFooter from '../components/NavigationFooter';
 import styles from '../styles/PageAccueil.module.css';
 
 export default function Home() {
   const router = useRouter();
-  const [showCamera, setShowCamera] = useState(false);
+  const { isAuthenticated, isLoading, userId, logout } = useAuth();
+  const [showCamera, setShowCamera] = useState(true);
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' pour arrière, 'user' pour avant
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -19,31 +24,23 @@ export default function Home() {
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const checkAuthAndProfile = async () => {
-      const token = localStorage.getItem('session_token');
-      const userId = localStorage.getItem('user_id');
+      if (isLoading) return;
       
-      if (!token) {
-        // Pas de session, rediriger vers la page d'authentification
-        router.push('/auth');
+      if (!isAuthenticated) {
+        // Pas de session, rediriger vers la page d'accueil
+        router.push('/welcome');
         return;
       }
 
       // Vérifier si le profil est complété
       if (userId) {
         try {
-          const response = await fetch(`http://localhost:8000/api/profile/check?user_id=${userId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (!data.profile_completed) {
-              // Profil non complété, rediriger vers l'onboarding
-              router.push('/onboarding-new');
-              return;
-            }
+          const data = await apiClient.get(`/api/profile/check?user_id=${userId}`);
+          
+          if (!data.profile_completed) {
+            // Profil non complété, rediriger vers l'onboarding
+            router.push('/onboarding-new');
+            return;
           }
         } catch (err) {
           console.log('Error checking profile:', err);
@@ -53,7 +50,41 @@ export default function Home() {
     };
 
     checkAuthAndProfile();
-  }, [router]);
+  }, [router, isAuthenticated, isLoading, userId]);
+
+  // Fonction pour démarrer la caméra
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Camera access error:', err);
+      setShowCamera(false);
+    }
+  };
+
+  // Ouvrir la caméra automatiquement au chargement
+  useEffect(() => {
+    if (!isAuthenticated || isLoading) return;
+    
+    startCamera();
+
+    // Nettoyer quand le composant est démonté
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isAuthenticated, isLoading, facingMode]);
 
   const handleScanClick = async () => {
     setShowCamera(true);
@@ -83,6 +114,11 @@ export default function Home() {
     setShowCamera(false);
   };
 
+  const handleFlipCamera = () => {
+    // Inverser entre caméra avant et arrière
+    setFacingMode(prevMode => prevMode === 'environment' ? 'user' : 'environment');
+  };
+
   // Nettoyage quand le composant est démonté
   useEffect(() => {
     return () => {
@@ -108,14 +144,7 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    // Supprimer les données de session
-    localStorage.removeItem('session_token');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('username');
-    localStorage.removeItem('first_name');
-    
-    // Rediriger vers la page d'authentification
-    router.push('/auth');
+    logout();
   };
 
   const handleProfileClick = () => {
@@ -126,6 +155,49 @@ export default function Home() {
   const handleGalleryClick = () => {
     // Ouvrir le sélecteur de fichiers
     fileInputRef.current?.click();
+  };
+
+  const handleCapturePhoto = () => {
+    // Capturer une photo depuis le flux vidéo
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Arrêter le flux vidéo
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      
+      // Convertir en blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const imageUrl = URL.createObjectURL(blob);
+          setSelectedImage(imageUrl);
+          // Stocker le blob pour l'envoyer plus tard lors de la validation
+          window.capturedBlob = blob;
+          console.log('Photo capturée');
+        }
+      }, 'image/jpeg', 0.95);
+    }
+  };
+
+  const handleValidatePhoto = () => {
+    // Envoyer la photo capturée pour analyse
+    if (window.capturedBlob) {
+      const file = new File([window.capturedBlob], 'captured-photo.jpg', { type: 'image/jpeg' });
+      
+      // Revenir immédiatement à la caméra
+      setSelectedImage(null);
+      startCamera();
+      
+      // Lancer l'analyse en arrière-plan
+      analyzeImage(file);
+    }
   };
 
   const handleFileChange = (event) => {
@@ -143,36 +215,13 @@ export default function Home() {
   const analyzeImage = async (file) => {
     setIsAnalyzing(true);
     setAnalysisResult(null);
-    
-    const token = localStorage.getItem('session_token');
-    if (!token) {
-      alert('Session expirée. Veuillez vous reconnecter.');
-      router.push('/auth');
-      return;
-    }
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/analyze/plate', {
-        method: 'POST',
-        headers: {
-          'X-Session-Token': token
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          alert('Session expirée. Veuillez vous reconnecter.');
-          router.push('/auth');
-          return;
-        }
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post('/api/analyze/plate', formData);
+      
       console.log('Résultat analyse:', data);
       setAnalysisResult(data);
       setEditableAliments(data.aliments || []);
@@ -203,35 +252,11 @@ export default function Home() {
       return;
     }
 
-    const token = localStorage.getItem('session_token');
-    if (!token) {
-      alert('Session expired. Please log in again.');
-      router.push('/auth');
-      return;
-    }
-
     try {
       setIsAnalyzing(true);
       
-      const response = await fetch('http://localhost:8000/api/analyze/nutrients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Session-Token': token
-        },
-        body: JSON.stringify(editableAliments),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          alert('Session expired. Please log in again.');
-          router.push('/auth');
-          return;
-        }
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post('/api/analyze/nutrients', editableAliments);
+      
       console.log('Meal validated:', data);
       
       alert(`✅ Meal saved successfully!\n\nID: ${data.meal_id}\n\nSuggestions are being generated...`);
@@ -305,17 +330,32 @@ export default function Home() {
           style={{ display: 'none' }}
         />
         
-        {!showCamera && !selectedImage ? (
-          <div className={styles.scanPrompt}>
-            <div className={styles.focusFrame}>
-              <span className={styles.corner + ' ' + styles.topLeft}></span>
-              <span className={styles.corner + ' ' + styles.topRight}></span>
-              <span className={styles.corner + ' ' + styles.bottomLeft}></span>
-              <span className={styles.corner + ' ' + styles.bottomRight}></span>
+        {selectedImage && !analysisResult ? (
+          // Affichage de la photo capturée dans le même bloc que la caméra
+          <div className={styles.scanContainer}>
+            <div className={styles.cameraView}>
+              <img src={selectedImage} alt="Captured" className={styles.capturedImage} />
+              <button className={styles.closeImage} onClick={() => {
+                setSelectedImage(null);
+                setAnalysisResult(null);
+                setEditableAliments([]);
+                // Redémarrer la caméra
+                startCamera();
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+              {/* Bouton de validation au centre en bas */}
+              <button className={styles.validatePhotoButton} onClick={handleValidatePhoto}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
             </div>
-            <p className={styles.scanText}>Scan me</p>
             <div className={styles.buttonGroup}>
-              <button className={styles.scanButton} onClick={handleScanClick}>
+              <button className={styles.scanButton} onClick={handleCapturePhoto}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                   <circle cx="12" cy="13" r="4"/>
@@ -330,7 +370,7 @@ export default function Home() {
               </button>
             </div>
           </div>
-        ) : selectedImage ? (
+        ) : analysisResult ? (
           <div className={styles.analysisContainer}>
             <div className={styles.imageSection}>
               <img src={selectedImage} alt="Selected image" className={styles.selectedImage} />
@@ -431,24 +471,43 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className={styles.cameraView}>
-            <video 
-              ref={videoRef}
-              className={styles.video} 
-              autoPlay 
-              playsInline
-            ></video>
-            <div className={styles.scanOverlay}>
-              <div className={styles.focusFrame}>
-                <span className={styles.corner + ' ' + styles.topLeft}></span>
-                <span className={styles.corner + ' ' + styles.topRight}></span>
-                <span className={styles.corner + ' ' + styles.bottomLeft}></span>
-                <span className={styles.corner + ' ' + styles.bottomRight}></span>
+          <div className={styles.scanContainer}>
+            <div className={styles.cameraView}>
+              <video 
+                ref={videoRef}
+                className={styles.video} 
+                autoPlay 
+                playsInline
+              ></video>
+              <div className={styles.scanOverlay}>
+                <div className={styles.focusFrame}>
+                  <span className={styles.corner + ' ' + styles.topLeft}></span>
+                  <span className={styles.corner + ' ' + styles.topRight}></span>
+                  <span className={styles.corner + ' ' + styles.bottomLeft}></span>
+                  <span className={styles.corner + ' ' + styles.bottomRight}></span>
+                </div>
+                <button className={styles.flipCamera} onClick={handleFlipCamera}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <path d="M17 2L21 6L17 10"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <path d="M7 22L3 18L7 14"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                  </svg>
+                </button>
               </div>
-              <button className={styles.closeCamera} onClick={handleCloseCamera}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
+            </div>
+            <div className={styles.buttonGroup}>
+              <button className={styles.scanButton} onClick={handleCapturePhoto}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </button>
+              <button className={styles.galleryButton} onClick={handleGalleryClick}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
                 </svg>
               </button>
             </div>
@@ -473,36 +532,7 @@ export default function Home() {
       </main>
 
       {/* Footer avec navigation */}
-      <footer className={styles.footer}>
-        <button className={styles.navButton} onClick={handleMenuClick}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-
-        <button 
-          className={styles.navButton + ' ' + styles.centerButton} 
-          onClick={handleAddClick}
-          onMouseEnter={() => setShowSuggestionCard(true)}
-          onMouseLeave={() => setShowSuggestionCard(false)}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#66BB6A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21h6"/>
-            <path d="M12 3v3"/>
-            <path d="M12 17v1a2 2 0 0 1-2 2h0a2 2 0 0 1-2-2v-1"/>
-            <path d="M8 17a5 5 0 1 1 8 0"/>
-          </svg>
-        </button>
-
-        <button className={styles.navButton} onClick={handleSearchClick}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-        </button>
-      </footer>
+      <NavigationFooter onScanClick={handleCapturePhoto} />
     </div>
   );
 }

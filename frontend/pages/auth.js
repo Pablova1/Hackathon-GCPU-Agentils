@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
+import { useAuth } from '../hooks/useAuth';
 import styles from '../styles/Auth.module.css';
 
 export default function Auth() {
   const router = useRouter();
+  const { isAuthenticated, login, register } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,12 +37,17 @@ export default function Auth() {
       return;
     }
     
-    const sessionToken = localStorage.getItem('session_token');
-    if (sessionToken) {
+    // Définir l'onglet actif basé sur le paramètre tab
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'register' || tabParam === 'login') {
+      setActiveTab(tabParam);
+    }
+    
+    if (isAuthenticated) {
       // Déjà connecté, rediriger vers l'app
       router.push('/');
     }
-  }, [router]);
+  }, [router, isAuthenticated]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -49,48 +56,29 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: loginData.email,
-          password: loginData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Sauvegarder dans localStorage
-        localStorage.setItem('session_token', data.session_token);
-        localStorage.setItem('user_id', data.user_id);
-        localStorage.setItem('first_name', data.first_name);
-        localStorage.setItem('last_name', data.last_name);
-        localStorage.setItem('email', data.email);
-
-        setSuccess('Login successful! Redirecting...');
-        
-        // Rediriger vers la page principale après 1 seconde
-        setTimeout(() => {
-          router.push('/');
-        }, 1000);
-      } else {
-        // Gérer les erreurs de validation (422) et les erreurs métier (400)
-        if (Array.isArray(data.detail)) {
+      await login(loginData.email, loginData.password);
+      setSuccess('Login successful! Redirecting...');
+      
+      // Rediriger vers la page principale après 1 seconde
+      setTimeout(() => {
+        router.push('/');
+      }, 1000);
+    } catch (err) {
+      // Gérer les erreurs
+      if (err.data?.detail) {
+        if (Array.isArray(err.data.detail)) {
           // Erreur de validation Pydantic (422)
-          const errorMessages = data.detail.map(err => err.msg).join(', ');
+          const errorMessages = err.data.detail.map(e => e.msg).join(', ');
           setError(errorMessages);
-        } else if (typeof data.detail === 'string') {
+        } else if (typeof err.data.detail === 'string') {
           // Erreur métier (400)
-          setError(data.detail);
+          setError(err.data.detail);
         } else {
           setError('Login error');
         }
+      } else {
+        setError(err.message || 'Server connection error. Please check that the API is running.');
       }
-    } catch (err) {
-      setError('Server connection error. Please check that the API is running.');
     } finally {
       setLoading(false);
     }
@@ -115,50 +103,31 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: registerData.first_name,
-          last_name: registerData.last_name,
-          email: registerData.email,
-          password: registerData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Sauvegarder dans localStorage
-        localStorage.setItem('session_token', data.session_token);
-        localStorage.setItem('user_id', data.user_id);
-        localStorage.setItem('first_name', data.first_name);
-        localStorage.setItem('last_name', data.last_name);
-        localStorage.setItem('email', data.email);
-
-        setSuccess('Registration successful! Redirecting to onboarding...');
-        
-        // Rediriger vers l'onboarding après l'inscription
-        setTimeout(() => {
-          router.push('/onboarding-new');
-        }, 1000);
-      } else {
-        // Gérer les erreurs de validation (422) et les erreurs métier (400)
-        if (Array.isArray(data.detail)) {
+      await register(
+        registerData.first_name,
+        registerData.last_name,
+        registerData.email,
+        registerData.password
+      );
+      
+      setSuccess('Registration successful! Redirecting to onboarding...');
+      // La redirection est gérée automatiquement par le hook useAuth
+    } catch (err) {
+      // Gérer les erreurs
+      if (err.data?.detail) {
+        if (Array.isArray(err.data.detail)) {
           // Erreur de validation Pydantic (422)
-          const errorMessages = data.detail.map(err => err.msg).join(', ');
+          const errorMessages = err.data.detail.map(e => e.msg).join(', ');
           setError(errorMessages);
-        } else if (typeof data.detail === 'string') {
+        } else if (typeof err.data.detail === 'string') {
           // Erreur métier (400)
-          setError(data.detail);
+          setError(err.data.detail);
         } else {
           setError('Registration error');
         }
+      } else {
+        setError(err.message || 'Server connection error. Please check that the API is running.');
       }
-    } catch (err) {
-      setError('Server connection error. Please check that the API is running.');
     } finally {
       setLoading(false);
     }
@@ -166,18 +135,16 @@ export default function Auth() {
 
   return (
     <div className={styles.container} data-tab={activeTab}>
-      {activeTab === 'register' && (
-        <div className={styles.logoContainer}>
-          <Image 
-            src="/logo-4.png" 
-            alt="MY PLATE Logo" 
-            width={200}
-            height={200}
-            priority
-            style={{ objectFit: 'contain' }}
-          />
-        </div>
-      )}
+      <div className={styles.logoContainer} data-tab={activeTab}>
+        <Image 
+          src="/logo-4.png" 
+          alt="MY PLATE Logo" 
+          width={200}
+          height={200}
+          priority
+          style={{ objectFit: 'contain' }}
+        />
+      </div>
       <div className={styles.card} data-tab={activeTab}>
         <div className={styles.header} data-tab={activeTab}>
           <h1>MY PLATE</h1>

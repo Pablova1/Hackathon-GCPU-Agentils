@@ -31,11 +31,12 @@
   max-width: 500px;
   z-index: 10;
   position: relative;
-  margin-bottom: -1rem;
+  margin-bottom: 1rem;
+  margin-top: 2rem;
 }
 
 .welcomeText {
-  font-size: 1.875rem;
+  font-size: 4rem;
   font-weight: 800;
   color: #000;
   text-align: center;
@@ -46,22 +47,23 @@
 
 /* Section centrale avec Logo plus grand */
 .centerSection {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  padding: 1rem 0;
+  padding: 0;
   position: relative;
+  margin: 1rem 0;
 }
 
-/* MY*PLATE* qui tourne en bas, plus petit */
+/* MY*PLATE* qui tourne en bas, plus grand et plus haut */
 .rotatingTextSection {
   z-index: 10;
   position: relative;
-  margin-bottom: 0.5rem;
-  margin-top: -1rem;
-  transform: scale(0.7);
+  margin-bottom: 2rem;
+  margin-top: 1rem;
+  transform: scale(1);
 }
 
 /* Section des boutons en bas */

@@ -1,6 +1,26 @@
 version: '3.8'
 
 services:
+  # MongoDB local désactivé - utilisation de MongoDB Atlas
+  # mongodb:
+  #   image: mongo:7.0
+  #   container_name: agentils-mongodb
+  #   restart: always
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     - MONGO_INITDB_DATABASE=agentils_db
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   networks:
+  #     - agentils-network
+  #   healthcheck:
+  #     test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 40s
+
   backend:
     build:
       context: .
@@ -16,6 +36,7 @@ services:
       - MONGO_URI=${MONGO_URI}
       - MONGO_DB=${MONGO_DB}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GCP_PROJECT_ID=${GOOGLE_CLOUD_PROJECT}
     volumes:
       - ./backend:/app/backend
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
@@ -51,3 +72,8 @@ services:
 networks:
   agentils-network:
     driver: bridge
+
+# MongoDB local désactivé - pas besoin de volume
+# volumes:
+#   mongodb_data:
+#     driver: local

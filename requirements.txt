@@ -1,4 +1,5 @@
-# AI & ML - Vertex AI
+# AI & ML - Google Gemini
+google-generativeai>=0.8.0
 google-cloud-aiplatform>=1.38.0
 pillow>=10.0.0
 
