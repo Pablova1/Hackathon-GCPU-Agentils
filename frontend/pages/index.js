@@ -204,11 +204,11 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       const imageUrl = URL.createObjectURL(file);
+      // Store the file in window for later validation (same as camera capture)
+      window.capturedBlob = file;
       setSelectedImage(imageUrl);
-      setShowCamera(false);
       console.log('Image sélectionnée:', file.name);
-      // Envoyer l'image au backend pour analyse
-      analyzeImage(file);
+      // Don't analyze immediately - wait for user to click validate button
     }
   };
 
