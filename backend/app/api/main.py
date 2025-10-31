@@ -38,7 +38,7 @@ app.add_middleware(
 
 # Inclusion des routes
 app.include_router(api_router, prefix="/api")
-app.include_router(meal_router, prefix="/api")  # Meals routes
+app.include_router(meal_router)  # Meals routes
 
 
 # Routes principales

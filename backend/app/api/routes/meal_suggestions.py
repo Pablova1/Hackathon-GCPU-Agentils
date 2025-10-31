@@ -1,6 +1,7 @@
 """
 Routes pour les suggestions de repas personnalisées.
 
+
 Endpoints:
 - POST /generate: Génère une suggestion de repas unique et concise
 - GET /health: Vérifie l'état du service
@@ -11,7 +12,10 @@ from pydantic import BaseModel, Field
 from typing import Optional
 import logging
 
-from app.ai.agents.agent_initializer import get_meal_suggestion_agent
+# Import meal agent wrapper from orchestrator
+from app.adk.orchestrators.adk_orchestrator import generate_meal_suggestion
+from app.adk.config import get_config
+from app.db.mongo_client import get_database
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +42,7 @@ class MealSuggestionResponse(BaseModel):
 async def generate_meal_suggestion(request: MealSuggestionRequest):
     """
     Génère UNE suggestion de repas concise et personnalisée en anglais.
-    
+        
     La suggestion est basée sur:
     - Le profil utilisateur (âge, sexe, poids, taille, niveau d'activité)
     - Les objectifs de santé (perte de poids, prise de muscle, etc.)
@@ -49,11 +53,8 @@ async def generate_meal_suggestion(request: MealSuggestionRequest):
     "Meal Name: Brief description — ~XXX kcal, macros"
     """
     try:
-        # Récupérer l'agent via le système centralisé
-        agent = get_meal_suggestion_agent()
-        
-        # Générer la suggestion (async maintenant!)
-        result = await agent.generate_suggestions(
+        # Use meal agent from orchestrator
+        result = await generate_meal_suggestion(
             user_id=request.user_id,
             days=request.history_days
         )
@@ -69,7 +70,7 @@ async def generate_meal_suggestion(request: MealSuggestionRequest):
             success=True,
             suggestion=result.get("suggestion"),
             user_id=request.user_id,
-            generated_at=result.get("generated_at")
+            generated_at=result.get("generated_at", "")
         )
     
     except HTTPException:
@@ -100,7 +101,7 @@ async def generate_meal_suggestion_by_path(
 async def health_check():
     """
     Vérifie que l'agent de suggestions de repas est opérationnel.
-    
+        
     Retourne:
     - status: "healthy" ou "unhealthy"
     - agent: informations sur l'agent
@@ -108,17 +109,19 @@ async def health_check():
     - gemini_configured: état de la configuration Gemini
     """
     try:
-        agent = get_meal_suggestion_agent()
+        # Get ADK config
+        config = get_config()
         
         # Tester la connexion MongoDB (async)
         try:
-            collections = await agent.db.list_collection_names()
+            db = await get_database()
+            collections = await db.list_collection_names()
             mongodb_connected = True
         except:
             mongodb_connected = False
         
         # Vérifier la config Gemini
-        gemini_configured = bool(agent.api_key and len(agent.api_key) > 20)
+        gemini_configured = bool(config.client)
         
         status = "healthy" if (mongodb_connected and gemini_configured) else "unhealthy"
         
@@ -126,7 +129,8 @@ async def health_check():
             "status": status,
             "agent": {
                 "name": "MealSuggestionAgent",
-                "model": agent.model_name,
+                "model": config.meal_agent_config["model"],
+                "type": "pure_adk",
                 "ready": True
             },
             "mongodb_connected": mongodb_connected,

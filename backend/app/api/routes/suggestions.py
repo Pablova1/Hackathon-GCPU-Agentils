@@ -11,14 +11,11 @@ from typing import Optional
 import logging
 from datetime import datetime
 
-from app.ai.agents.agent_initializer import (
-    get_meal_suggestion_agent,
-    get_coach_agent,
-    get_medical_agent,
-    get_orchestrator_agent
-)
 from app.db.user_store import get_user_document, update_user_document
 from app.db.mongo_client import get_database
+
+# Import PURE ADK orchestrator (replaces all custom agents)
+from app.adk.orchestrators.adk_orchestrator import orchestrate_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -29,34 +26,13 @@ async def generate_and_store_suggestions(user_id: str, history_days: int = 7):
     """
     Génère les suggestions et les stocke dans le document utilisateur.
     Fonction appelée en arrière-plan après le scan d'un repas.
+    
     """
     try:
-        logger.info(f"🔄 Background task: Generating suggestions for user_id: {user_id}")
+        logger.info(f"🔄 Background task (ADK): Generating suggestions for user_id: {user_id}")
         
-        # Récupérer les agents
-        meal_agent = get_meal_suggestion_agent()
-        coach_agent = get_coach_agent()
-        medical_agent = get_medical_agent()
-        orchestrator = get_orchestrator_agent()
-        
-        # Générer les suggestions
-        meal_result = await meal_agent.generate_suggestions(user_id=user_id, days=history_days)
-        workout_result = await coach_agent.generate_suggestions(user_id=user_id, days=history_days)
-        
-        medical_result = None
-        try:
-            medical_result = await medical_agent.analyze_medical_context(user_id=user_id)
-            if not medical_result.get("success", False):
-                medical_result = None
-        except Exception:
-            medical_result = None
-        
-        # Orchestrer
-        unified_result = orchestrator.orchestrate(
-            meal_suggestion=meal_result,
-            workout_suggestion=workout_result,
-            medical_context=medical_result
-        )
+        # Use ADK orchestrator (replaces custom agent coordination)
+        unified_result = await orchestrate_suggestions(user_id=user_id, days=history_days)
         
         if unified_result.get("success", False):
             # Stocker dans le document utilisateur
@@ -117,19 +93,20 @@ async def generate_unified_suggestion(request: UnifiedSuggestionRequest):
     """
     Génère une suggestion holistique unifiée combinant nutrition, fitness et contexte médical.
     
+    NOW USES ADK (Agent Development Kit).
+    
     Processus:
-    1. Récupère l'utilisateur par user_id
-    2. MealSuggestionAgent génère une suggestion de repas
-    3. CoachAgent génère une suggestion d'entraînement
-    4. MedicalAgent analyse le contexte médical (optionnel)
-    5. OrchestratorAgent combine les trois en une recommandation cohérente
+    1. ADK Meal Agent génère une suggestion de repas
+    2. ADK Coach Agent génère une suggestion d'entraînement
+    3. ADK Medical Agent analyse le contexte médical (optionnel)
+    4. ADK Orchestrator combine les trois en une recommandation cohérente
     
     Retourne une suggestion intégrée qui aligne nutrition, fitness et santé.
     """
     try:
-        logger.info(f"Generating unified suggestion for user_id: {request.user_id}")
+        logger.info(f"Generating unified suggestion (ADK) for user_id: {request.user_id}")
         
-        # Étape 0: Vérifier que l'utilisateur existe
+        # Vérifier que l'utilisateur existe
         user = await get_user_document(request.user_id)
         if not user:
             raise HTTPException(
@@ -138,49 +115,12 @@ async def generate_unified_suggestion(request: UnifiedSuggestionRequest):
             )
         
         user_id = request.user_id
-        
         logger.info(f"User found with user_id: {user_id}")
         
-        # Récupérer les 4 agents
-        meal_agent = get_meal_suggestion_agent()
-        coach_agent = get_coach_agent()
-        medical_agent = get_medical_agent()
-        orchestrator = get_orchestrator_agent()
-        
-        # Étape 1: Générer suggestion de repas
-        logger.info("Step 1: Generating meal suggestion...")
-        meal_result = await meal_agent.generate_suggestions(
+        # Use ADK orchestrator (replaces all 4 custom agents)
+        unified_result = await orchestrate_suggestions(
             user_id=user_id,
             days=request.history_days
-        )
-        
-        # Étape 2: Générer suggestion d'entraînement
-        logger.info("Step 2: Generating workout suggestion...")
-        workout_result = await coach_agent.generate_suggestions(
-            user_id=user_id,
-            days=request.history_days
-        )
-        
-        # Étape 3: Analyser le contexte médical (optionnel - ne pas échouer si erreur)
-        logger.info("Step 3: Analyzing medical context...")
-        medical_result = None
-        try:
-            medical_result = await medical_agent.analyze_medical_context(
-                user_id=user_id
-            )
-            if not medical_result.get("success", False):
-                logger.warning(f"Medical analysis failed: {medical_result.get('error')}")
-                medical_result = None
-        except Exception as e:
-            logger.warning(f"Medical agent error (continuing without): {e}")
-            medical_result = None
-        
-        # Étape 4: Orchestrer les suggestions
-        logger.info("Step 4: Orchestrating suggestions...")
-        unified_result = orchestrator.orchestrate(
-            meal_suggestion=meal_result,
-            workout_suggestion=workout_result,
-            medical_context=medical_result
         )
         
         # Vérifier le succès
@@ -342,38 +282,35 @@ async def trigger_suggestion_generation(user_id: str, background_tasks: Backgrou
 @router.get("/health")
 async def health_check():
     """
-    Vérifie que tous les agents sont opérationnels.
+    Vérifie que le système ADK est opérationnel.
     """
     try:
-        meal_agent = get_meal_suggestion_agent()
-        coach_agent = get_coach_agent()
-        medical_agent = get_medical_agent()
-        orchestrator = get_orchestrator_agent()
+        from app.adk.config import get_config
+        
+        config = get_config()
         
         # Tester MongoDB
+        mongodb_connected = False
         try:
-            await meal_agent.db.list_collection_names()
+            db = await get_database()
+            await db.list_collection_names()
             mongodb_connected = True
         except:
             mongodb_connected = False
         
-        # Vérifier Gemini
-        gemini_configured = bool(
-            meal_agent.api_key and 
-            coach_agent.api_key and 
-            medical_agent.api_key and
-            orchestrator.api_key
-        )
+        # Vérifier ADK/Gemini
+        gemini_configured = bool(config.api_key)
         
         status = "healthy" if (mongodb_connected and gemini_configured) else "unhealthy"
         
         return {
             "status": status,
+            "system": "ADK (Agent Development Kit)",
             "agents": {
-                "meal_suggestion": {"ready": True, "model": meal_agent.model_name},
-                "coach": {"ready": True, "model": coach_agent.model_name},
-                "medical": {"ready": True, "model": medical_agent.model_name},
-                "orchestrator": {"ready": True, "model": orchestrator.model_name}
+                "meal_suggestion": {"ready": True, "model": config.meal_agent_config["model"], "type": "ADK"},
+                "coach": {"ready": True, "model": config.coach_agent_config["model"], "type": "ADK"},
+                "medical": {"ready": True, "model": config.medical_agent_config["model"], "type": "ADK"},
+                "orchestrator": {"ready": True, "model": config.orchestrator_config["model"], "type": "ADK"}
             },
             "mongodb_connected": mongodb_connected,
             "gemini_configured": gemini_configured

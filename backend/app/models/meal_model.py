@@ -28,62 +28,22 @@ class PyObjectId(ObjectId):
         return json_schema
 
 
-class Micronutrients(BaseModel):
-    """Micronutriments d'un repas"""
-    calcium_mg: Optional[float] = Field(None, description="Calcium en mg")
-    iron_mg: Optional[float] = Field(None, description="Fer en mg")
-    magnesium_mg: Optional[float] = Field(None, description="Magnésium en mg")
-    potassium_mg: Optional[float] = Field(None, description="Potassium en mg")
-    sodium_mg: Optional[float] = Field(None, description="Sodium en mg")
-    zinc_mg: Optional[float] = Field(None, description="Zinc en mg")
-    phosphorus_mg: Optional[float] = Field(None, description="Phosphore en mg")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "calcium_mg": 57.1,
-                "iron_mg": 2.0,
-                "magnesium_mg": 104.8,
-                "potassium_mg": 844.4,
-                "sodium_mg": 136.4,
-                "zinc_mg": 2.1,
-                "phosphorus_mg": 435.8
-            }
-        }
-
-
 class Nutrients(BaseModel):
-    """Informations nutritionnelles complètes d'un repas"""
-    energy_kcal: Optional[float] = Field(None, description="Énergie en kcal")
-    proteins_g: Optional[float] = Field(None, description="Protéines en grammes")
-    carbohydrates_g: Optional[float] = Field(None, description="Glucides en grammes")
-    lipids_g: Optional[float] = Field(None, description="Lipides totaux en grammes")
-    fiber_g: Optional[float] = Field(None, description="Fibres en grammes")
-    sugars_g: Optional[float] = Field(None, description="Sucres en grammes")
-    saturated_fats_g: Optional[float] = Field(None, description="Acides gras saturés en grammes")
-    unsaturated_fats_g: Optional[float] = Field(None, description="Acides gras insaturés en grammes")
-    micronutrients: Optional[Micronutrients] = Field(default_factory=Micronutrients, description="Micronutriments")
+    """Informations nutritionnelles d'un repas"""
+    calories: Optional[float] = Field(None, description="Calories en kcal")
+    protein: Optional[float] = Field(None, description="Protéines en grammes")
+    fat: Optional[float] = Field(None, description="Lipides en grammes")
+    carbohydrates: Optional[float] = Field(None, description="Glucides en grammes")
+    fiber: Optional[float] = Field(None, description="Fibres en grammes")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "energy_kcal": 398.5,
-                "proteins_g": 51.0,
-                "carbohydrates_g": 28.8,
-                "lipids_g": 6.6,
-                "fiber_g": 4.2,
-                "sugars_g": 1.3,
-                "saturated_fats_g": 1.73,
-                "unsaturated_fats_g": 4.89,
-                "micronutrients": {
-                    "calcium_mg": 57.1,
-                    "iron_mg": 2.0,
-                    "magnesium_mg": 104.8,
-                    "potassium_mg": 844.4,
-                    "sodium_mg": 136.4,
-                    "zinc_mg": 2.1,
-                    "phosphorus_mg": 435.8
-                }
+                "calories": 450.5,
+                "protein": 35.2,
+                "fat": 12.8,
+                "carbohydrates": 45.3,
+                "fiber": 8.5
             }
         }
 
@@ -115,23 +75,11 @@ class MealDocument(BaseModel):
                     "lemon juice"
                 ],
                 "nutrients": {
-                    "energy_kcal": 398.5,
-                    "proteins_g": 51.0,
-                    "carbohydrates_g": 28.8,
-                    "lipids_g": 6.6,
-                    "fiber_g": 4.2,
-                    "sugars_g": 1.3,
-                    "saturated_fats_g": 1.73,
-                    "unsaturated_fats_g": 4.89,
-                    "micronutrients": {
-                        "calcium_mg": 57.1,
-                        "iron_mg": 2.0,
-                        "magnesium_mg": 104.8,
-                        "potassium_mg": 844.4,
-                        "sodium_mg": 136.4,
-                        "zinc_mg": 2.1,
-                        "phosphorus_mg": 435.8
-                    }
+                    "calories": 450.5,
+                    "protein": 35.2,
+                    "fat": 12.8,
+                    "carbohydrates": 45.3,
+                    "fiber": 8.5
                 },
                 "dateScanned": "2025-01-15T12:30:00Z"
             }
@@ -152,14 +100,11 @@ class MealCreate(BaseModel):
                 "name": "Healthy Chicken Bowl",
                 "ingredients": ["chicken breast", "quinoa", "broccoli"],
                 "nutrients": {
-                    "energy_kcal": 398.5,
-                    "proteins_g": 51.0,
-                    "carbohydrates_g": 28.8,
-                    "lipids_g": 6.6,
-                    "fiber_g": 4.2,
-                    "sugars_g": 1.3,
-                    "saturated_fats_g": 1.73,
-                    "unsaturated_fats_g": 4.89
+                    "calories": 450.5,
+                    "protein": 35.2,
+                    "fat": 12.8,
+                    "carbohydrates": 45.3,
+                    "fiber": 8.5
                 }
             }
         }
@@ -176,8 +121,8 @@ class MealUpdate(BaseModel):
             "example": {
                 "name": "Updated Chicken Bowl",
                 "nutrients": {
-                    "energy_kcal": 475.0,
-                    "proteins_g": 38.0
+                    "calories": 475.0,
+                    "protein": 38.0
                 }
             }
         }

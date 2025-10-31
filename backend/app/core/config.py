@@ -5,6 +5,7 @@ Configuration centralisée de l'application.
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import logging
 
 # Chemins
 BASE_DIR = Path(__file__).parent.parent.parent
@@ -16,6 +17,17 @@ load_dotenv(dotenv_path=env_path)
 
 # Créer le dossier uploads
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Configuration cache
+MAX_MESSAGES_PER_USER = 20
+
+# Configuration des logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configuration API
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
 
 
 class Settings:
@@ -34,10 +46,9 @@ class Settings:
     BASE_DIR: Path = BASE_DIR
     UPLOAD_DIR: Path = UPLOAD_DIR
     
-    # Google Cloud / Vertex AI
-    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
-    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
+    # Google API
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

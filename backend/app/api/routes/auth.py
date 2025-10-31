@@ -115,34 +115,33 @@ async def register(request: RegisterRequest):
         },
         # Les autres sections seront remplies lors de l'onboarding
         "medical": {
-            "treatments": [],
-            "allergies": [],
+            "treatments": None,
+            "allergies": None,
             "medicalHistory": {
-                "personal": [],
-                "family": []
+                "personal": None,
+                "family": None
             },
             "birthControl": None
         },
         "nutrition": {
             "diet": None,
-            "intolerances": [],
-            "preferences": {
-                "liked": [],
-                "disliked": [],
-                "general": []
-            }
+            "intolerances": None,
+            "preferences": None
         },
         "goals": {
-            "muscleGain": False,
-            "weightLoss": False,
+            "muscleGain": None,
+            "weightLoss": None,
             "goalDetail": None,
-            "performance": False,
-            "maintainShape": False
+            "performance": None,
+            "maintainShape": None
         },
-        "religiousRestrictions": None,
+        "religiousRestrictions": {
+            "practicing": None,
+            "type": None
+        },
         "misc": {
             "activityLevel": None,
-            "sports": [],
+            "sports": None,
             "occupation": None,
             "notes": None
         }
