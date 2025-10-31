@@ -41,11 +41,12 @@ async def speech_to_text_service(audio: UploadFile) -> TranscriptResponse:
             config = {
                 "encoding": "WEBM_OPUS",
                 "sampleRateHertz": 48000,
+                "audioChannelCount": 2,
                 "languageCode": "fr-FR",
                 "model": "latest_short",
                 "enableAutomaticPunctuation": True
             }
-            logger.info("🔧 Configuration WebM/Opus")
+            logger.info("🔧 Configuration WebM/Opus (stéréo)")
         else:
             # Configuration générique pour autres formats
             config = {
