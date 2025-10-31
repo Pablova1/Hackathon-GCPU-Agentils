@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB local désactivé - utilisation de MongoDB Atlas
   # mongodb:
@@ -37,6 +35,7 @@ services:
       - MONGO_DB=${MONGO_DB}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GCP_PROJECT_ID=${GOOGLE_CLOUD_PROJECT}
+      - WEEKLY_SCORE_SYSTEM_PROMPT=${WEEKLY_SCORE_SYSTEM_PROMPT}
     volumes:
       - ./backend:/app/backend
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload

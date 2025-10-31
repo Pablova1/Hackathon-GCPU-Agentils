@@ -7,7 +7,7 @@ import styles from '../styles/Home.module.css';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, userId } = useAuth();
+  const { isAuthenticated, isLoading, userId, logout } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,6 +37,10 @@ export default function Home() {
 
   const handleBackClick = () => {
     router.push('/');
+  };
+
+  const handleLogout = () => {
+    logout();
   };
 
   // Get current week days
@@ -111,7 +115,13 @@ export default function Home() {
           </svg>
         </button>
         <h1 className={styles.title}>My Statistics</h1>
-        <div className={styles.placeholder}></div>
+        <button className={styles.logoutButton} onClick={handleLogout} title="Logout">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
       </header>
 
       <main className={styles.main}>

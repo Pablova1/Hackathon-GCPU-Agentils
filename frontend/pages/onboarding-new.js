@@ -94,6 +94,23 @@ export default function Onboarding() {
     checkAuthAndLoadQuestions();
   }, [router, isAuthenticated, isLoading, userId]);
 
+  // Fonction pour gérer le retour en arrière
+  const handleBackClick = () => {
+    // Vérifier si on vient de la page auth en regardant le document.referrer
+    // ou en vérifiant l'historique du navigateur
+    const previousPath = window.history.state?.as || document.referrer;
+    
+    // Si la page précédente contient '/auth' ou si on est en mode création (pas en mode édition)
+    if (previousPath.includes('/auth') || !isEditMode) {
+      // Déconnecter l'utilisateur avant de revenir en arrière
+      logout();
+      router.push('/auth');
+    } else {
+      // Sinon, simple retour en arrière
+      router.back();
+    }
+  };
+
   const handleAnswerChange = (slot, value) => {
     setAnswers(prev => ({
       ...prev,
@@ -435,16 +452,33 @@ export default function Onboarding() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {/* Bouton retour qui déconnecte l'utilisateur */}
+        {/* Bouton de retour */}
+        <button 
+          onClick={handleBackClick} 
+          style={styles.backButton}
+          type="button"
+          title="Back"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        
+        {/* Bouton logout rouge */}
         <button 
           onClick={() => {
             logout();
             router.push('/auth');
           }} 
-          style={styles.backButton}
+          style={styles.logoutButton}
           type="button"
+          title="Logout"
         >
-          ← Logout
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
         </button>
         
         <h1 style={styles.title}>
@@ -578,18 +612,33 @@ const styles = {
     position: 'absolute',
     top: '20px',
     left: '20px',
-    padding: '10px 20px',
-    backgroundColor: '#f5f5f5',
-    color: '#666',
-    border: '2px solid #e0e0e0',
-    borderRadius: '8px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    fontWeight: '500',
-    transition: 'all 0.2s',
+    background: 'white',
+    border: 'none',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
-    gap: '5px'
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    color: '#333'
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#e74c3c',
+    padding: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
+    borderRadius: '8px'
   },
   title: {
     textAlign: 'center',
@@ -687,19 +736,21 @@ const styles = {
     transition: 'background-color 0.2s'
   },
   backButton: {
-    marginBottom: '20px',
-    padding: '10px 20px',
-    backgroundColor: 'transparent',
-    color: '#4CAF50',
-    border: '2px solid #4CAF50',
-    borderRadius: '8px',
-    fontSize: '16px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    transition: 'all 0.2s',
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+    background: 'white',
+    border: 'none',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
-    gap: '5px'
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    color: '#333'
   },
   errorMessage: {
     padding: '15px',
