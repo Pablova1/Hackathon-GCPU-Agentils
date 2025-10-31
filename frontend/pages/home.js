@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../utils/api';
 import NavigationFooter from '../components/NavigationFooter';
+import MealCardStack from '../components/MealCardStack';
 import styles from '../styles/Home.module.css';
 
 export default function Home() {
@@ -54,6 +55,11 @@ export default function Home() {
 
   const handleBackClick = () => {
     router.push('/');
+  };
+
+  const handleProfileClick = () => {
+    // Rediriger vers la page d'onboarding pour modifier les réponses
+    router.push('/onboarding-new');
   };
 
   const handleLogout = () => {
@@ -126,9 +132,10 @@ export default function Home() {
     <div className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
-        <button className={styles.backButton} onClick={handleBackClick}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6"></polyline>
+        <button className={styles.profileIcon} onClick={handleProfileClick} title="Edit my profile">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
           </svg>
         </button>
         <h1 className={styles.title}>My profils</h1>
@@ -149,26 +156,8 @@ export default function Home() {
             
             {mealSuggestions.meal_suggestions && mealSuggestions.meal_suggestions.length > 0 ? (
               <>
-                <div className={styles.mealSuggestionsList}>
-                  {mealSuggestions.meal_suggestions.slice(0, 3).map((suggestion, index) => (
-                    <div key={index} className={styles.mealSuggestionCard}>
-                      <div className={styles.mealHeader}>
-                        <h3 className={styles.mealName}>{suggestion.name}</h3>
-                        <span className={styles.mealTime}>{suggestion.meal_time}</span>
-                      </div>
-                      <p className={styles.mealDescription}>{suggestion.description}</p>
-                      {suggestion.calories && (
-                        <div className={styles.mealCalories}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9800" strokeWidth="2">
-                            <path d="M12 2v20M2 12h20"/>
-                          </svg>
-                          <span>{suggestion.calories} kcal</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {mealSuggestions.meal_suggestions.length > 3 && (
+                <MealCardStack suggestions={mealSuggestions.meal_suggestions} />
+                {mealSuggestions.meal_suggestions.length > 5 && (
                   <button 
                     className={styles.viewAllButton}
                     onClick={() => router.push('/suggestion')}

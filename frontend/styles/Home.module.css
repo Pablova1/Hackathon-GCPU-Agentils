@@ -106,6 +106,31 @@
   stroke: #333;
 }
 
+.profileIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.profileIcon:hover {
+  background: #e0e0e0;
+  border-color: #66BB6A;
+  transform: scale(1.05);
+}
+
+.profileIcon:active {
+  transform: scale(0.95);
+}
+
 .logoutButton {
   background: none;
   border: none;
@@ -435,20 +460,24 @@
   background: white;
   border-radius: 20px;
   padding: 1.5rem;
-  margin-bottom: 0;
+  margin-bottom: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sectionTitle {
   font-size: 1.3rem;
   font-weight: 700;
   color: #333;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .mealSuggestionsList {
@@ -514,6 +543,7 @@
 
 .viewAllButton {
   width: 100%;
+  max-width: 340px;
   background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
   color: white;
   border: none;
@@ -524,6 +554,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+  margin-top: 1.5rem;
 }
 
 .viewAllButton:hover {

@@ -46,6 +46,7 @@ export default function NavigationFooter({ onScanClick }) {
 
   return (
     <footer className={styles.footer}>
+      {/* Ampoule - Position 1 (gauche) */}
       <button 
         className={activeIcon === 'ampoule' ? styles.navButton + ' ' + styles.centerButton : styles.navButton}
         onClick={handleAmpouleClick}
@@ -63,6 +64,7 @@ export default function NavigationFooter({ onScanClick }) {
         />
       </button>
 
+      {/* Scan - Position 2 (centre) */}
       <button 
         className={activeIcon === 'scan' ? styles.navButton + ' ' + styles.centerButton : styles.navButton}
         onClick={handleScanClick}
@@ -80,6 +82,7 @@ export default function NavigationFooter({ onScanClick }) {
         />
       </button>
 
+      {/* Bot - Position 3 (droite) */}
       <button 
         className={activeIcon === 'bot' ? styles.navButton + ' ' + styles.centerButton : styles.navButton}
         onClick={handleBotClick}

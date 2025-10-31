@@ -12,8 +12,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from vertexai.generative_models import GenerativeModel
-import vertexai
+import google.generativeai as genai
 from bson import ObjectId
 
 
@@ -58,19 +57,17 @@ class MedicalAgent:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        self.project_id = project_id or os.getenv("GCP_PROJECT_ID")
-        self.location = location or os.getenv("GCP_LOCATION", "us-central1")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         
-        if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID manquant dans .env")
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY manquant dans .env")
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
+        # Initialiser Gemini API
+        genai.configure(api_key=self.api_key)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(model_name)
         
-        logger.info(f"MedicalAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
+        logger.info(f"MedicalAgent initialisé avec le modèle {model_name} via Gemini API")
     
     async def get_user_medical_context(self, user_id: str) -> Dict[str, Any]:
         """
@@ -82,9 +79,19 @@ class MedicalAgent:
         Returns:
             Dict contenant profil, antécédents, traitements et conditions
         """
-        # Récupérer l'utilisateur par user_id (string)
+        # Récupérer l'utilisateur par user_id (string) OU _id (ObjectId)
         logger.info(f"Searching user with user_id={user_id}")
+        
+        # Essayer d'abord avec user_id (string)
         user = await self.users_collection.find_one({"user_id": user_id})
+        
+        # Si pas trouvé, essayer avec _id (ObjectId)
+        if not user:
+            try:
+                from bson import ObjectId
+                user = await self.users_collection.find_one({"_id": ObjectId(user_id)})
+            except:
+                pass
         
         if not user:
             logger.warning(f"Utilisateur non trouvé: {user_id}")

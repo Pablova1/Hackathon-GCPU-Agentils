@@ -10,8 +10,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-from vertexai.generative_models import GenerativeModel
-import vertexai
+import google.generativeai as genai
 from bson import ObjectId
 
 
@@ -56,19 +55,17 @@ class CoachAgent:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        self.project_id = project_id or os.getenv("GCP_PROJECT_ID")
-        self.location = location or os.getenv("GCP_LOCATION", "us-central1")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         
-        if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID manquant dans .env")
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY manquant dans .env")
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
+        # Initialiser Gemini API
+        genai.configure(api_key=self.api_key)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(model_name)
         
-        logger.info(f"CoachAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
+        logger.info(f"CoachAgent initialisé avec le modèle {model_name} via Gemini API")
     
     async def get_user_fitness_context(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """
@@ -81,13 +78,26 @@ class CoachAgent:
         Returns:
             Dict contenant profil, objectifs, et historique d'entraînement
         """
-        # Récupérer l'utilisateur par user_id (string)
+        # Récupérer l'utilisateur par user_id (string) OU _id (ObjectId)
         logger.info(f"Searching user with user_id={user_id}")
+        
+        # Essayer d'abord avec user_id (string)
         user = await self.users_collection.find_one({"user_id": user_id})
+        
+        # Si pas trouvé, essayer avec _id (ObjectId)
+        if not user:
+            try:
+                from bson import ObjectId
+                user = await self.users_collection.find_one({"_id": ObjectId(user_id)})
+            except:
+                pass
         
         if not user:
             logger.warning(f"User not found with user_id={user_id}")
             return {"error": f"User not found: {user_id}"}
+        
+        # Récupérer le user_id (string) pour les requêtes suivantes
+        actual_user_id = user.get("user_id", str(user.get("_id")))
         
         logger.info(f"User found: {user.get('profile', {}).get('firstName', 'Unknown')} {user.get('profile', {}).get('lastName', '')}")
         
@@ -96,11 +106,11 @@ class CoachAgent:
         start_date_str = start_date.isoformat()
         
         # Utiliser le user_id (string) pour chercher dans workouts
-        logger.info(f"Searching workouts with userId='{user_id}' (string)")
+        logger.info(f"Searching workouts with userId='{actual_user_id}' (string)")
         
         # Chercher avec userId (camelCase, string) - format dans la collection workouts
         workouts_cursor = self.workouts_collection.find({
-            "userId": user_id,
+            "userId": actual_user_id,
             "date": {"$gte": start_date_str}
         }).sort("date", -1)
         recent_workouts = await workouts_cursor.to_list(length=None)

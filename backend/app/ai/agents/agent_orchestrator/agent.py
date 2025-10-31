@@ -11,8 +11,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from vertexai.generative_models import GenerativeModel
-import vertexai
+import google.generativeai as genai
 
 
 # Configuration du logging
@@ -50,19 +49,17 @@ class OrchestratorAgent:
             env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        self.project_id = project_id or os.getenv("GCP_PROJECT_ID")
-        self.location = location or os.getenv("GCP_LOCATION", "us-central1")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         
-        if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID manquant dans .env")
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY manquant dans .env")
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
+        # Initialiser Gemini API
+        genai.configure(api_key=self.api_key)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(model_name)
         
-        logger.info(f"OrchestratorAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
+        logger.info(f"OrchestratorAgent initialisé avec le modèle {model_name} via Gemini API")
     
     def build_orchestration_prompt(
         self,

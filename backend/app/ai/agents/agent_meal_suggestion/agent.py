@@ -11,8 +11,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-from vertexai.generative_models import GenerativeModel
-import vertexai
+import google.generativeai as genai
 from bson import ObjectId
 
 
@@ -63,23 +62,21 @@ class MealSuggestionAgent:
         self.users_collection = mongo_db.get_collection("user")
         self.meals_collection = mongo_db.get_collection("meals")
         
-        # Configuration Vertex AI
-        self.project_id = project_id or os.getenv('GCP_PROJECT_ID')
-        self.location = location or os.getenv('GCP_LOCATION', 'us-central1')
+        # Configuration Gemini API
+        self.api_key = os.getenv('GOOGLE_API_KEY')
         
-        if not self.project_id:
+        if not self.api_key:
             raise ValueError(
-                "GCP_PROJECT_ID manquant. "
-                "Définissez GCP_PROJECT_ID dans .env"
+                "GOOGLE_API_KEY manquant. "
+                "Définissez GOOGLE_API_KEY dans .env"
             )
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
+        # Initialiser Gemini API
+        genai.configure(api_key=self.api_key)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(model_name)
         
-        logger.info(f"MealSuggestionAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
+        logger.info(f"MealSuggestionAgent initialisé avec le modèle {model_name} via Gemini API")
     
     async def get_user_context(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """
@@ -92,13 +89,26 @@ class MealSuggestionAgent:
         Returns:
             Dict contenant le profil, santé, préférences et historique de repas
         """
-        # Récupérer l'utilisateur par user_id (string)
+        # Récupérer l'utilisateur par user_id (string) OU _id (ObjectId)
         logger.info(f"Searching user with user_id={user_id}")
+        
+        # Essayer d'abord avec user_id (string)
         user = await self.users_collection.find_one({"user_id": user_id})
+        
+        # Si pas trouvé, essayer avec _id (ObjectId)
+        if not user:
+            try:
+                from bson import ObjectId
+                user = await self.users_collection.find_one({"_id": ObjectId(user_id)})
+            except:
+                pass
         
         if not user:
             logger.warning(f"Utilisateur non trouvé: {user_id}")
             return {"error": f"User not found: {user_id}"}
+        
+        # Récupérer le user_id (string) pour les requêtes suivantes
+        actual_user_id = user.get("user_id", str(user.get("_id")))
         
         # Calculer la date de début pour l'historique
         start_date = datetime.now() - timedelta(days=days)
@@ -106,11 +116,11 @@ class MealSuggestionAgent:
         
         # Récupérer les repas récents (async)
         # Utiliser le user_id (string) pour chercher dans meals
-        logger.info(f"Searching meals for userId: {user_id}")
+        logger.info(f"Searching meals for userId: {actual_user_id}")
         
         # Chercher avec userId (string) - format standard dans la collection meals
         recent_meals_cursor = self.meals_collection.find({
-            "userId": user_id,
+            "userId": actual_user_id,
             "dateScanned": {"$gte": start_date_str}
         }).sort("dateScanned", -1)
         recent_meals = await recent_meals_cursor.to_list(length=None)

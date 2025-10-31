@@ -278,10 +278,6 @@ export default function Home() {
     setEditableAliments([]);
     startCamera();
 
-    // Show toast confirmation
-    setErrorMessage('Meal is being analyzed in the background. You can scan another plate!');
-    setTimeout(() => setErrorMessage(null), 3000);
-
     // Launch API call in background
     setTimeout(async () => {
       try {
