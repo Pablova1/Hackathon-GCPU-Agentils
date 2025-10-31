@@ -65,7 +65,6 @@ class OnboardingAgent:
             load_env: Si True, charge les variables d'environnement depuis .env
         """
         if load_env:
-            # Remonter 6 niveaux pour atteindre la racine du projet
             # agent.py -> agent_onboarding -> agents -> ai -> app -> backend -> PROJECT_ROOT
             env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             logger.debug(f"Chargement du .env depuis: {env_path}")
@@ -203,7 +202,6 @@ class OnboardingAgent:
             return None
 
 
-# Instance globale pour compatibilité avec l'ancien code
 _default_agent = None
 
 def get_default_agent() -> OnboardingAgent:

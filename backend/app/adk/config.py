@@ -27,7 +27,6 @@ class ADKConfig:
         # Configure the Google GenAI client
         self.client = genai.Client(api_key=self.api_key)
         
-        # Default model for all agents - using gemini-2.0-flash-exp as per ADK docs
         self.default_model = "gemini-2.5-flash"
         
         # Agent configurations
@@ -45,7 +44,7 @@ class ADKConfig:
         
         self.medical_agent_config = {
             "model": self.default_model,
-            "temperature": 0.5,  # Lower temperature for medical accuracy
+            "temperature": 0.5,  
             "max_output_tokens": 2048,
         }
         

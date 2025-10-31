@@ -75,5 +75,5 @@ root_agent = Agent(
     description="Professional nutritionist AI that provides personalized meal recommendations based on user profile and meal history.",
     instruction=SYSTEM_INSTRUCTION,
     tools=[get_user_profile_db, get_user_meals_db],
-    output_schema=MealSuggestion,  # Enforce structured JSON output
+    output_schema=MealSuggestion,  
 )
