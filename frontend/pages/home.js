@@ -26,7 +26,7 @@ export default function Home() {
       try {
         // Charger les stats ET les suggestions en parallèle
         const [statsData, suggestionsData] = await Promise.all([
-          apiClient.get(`/api/meals/user/${userId}/home-stats`),
+          apiClient.get(`/meals/user/${userId}/home-stats`),
           apiClient.get(`/api/suggestions/meals/${userId}`)
         ]);
 

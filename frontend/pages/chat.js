@@ -100,7 +100,7 @@ export default function ChatPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/chat`, {
+      const response = await fetch(`${apiUrl}/api/chatbot/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ export default function ChatPage() {
       formData.append('audio', audioBlob, 'audio.webm');
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/stt`, {
+      const response = await fetch(`${apiUrl}/api/chatbot/stt`, {
         method: 'POST',
         body: formData
       });
@@ -305,7 +305,7 @@ export default function ChatPage() {
         setVoiceConversation(prev => [...prev, userMessage]);
 
         // Étape 2: Obtenir la réponse du chatbot
-        const chatResponse = await fetch(`${apiUrl}/chat`, {
+        const chatResponse = await fetch(`${apiUrl}/api/chatbot/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

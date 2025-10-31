@@ -41,7 +41,7 @@ export const apiClient = {
 
     // Timeout adaptatif : 30 secondes pour les analyses d'image, 10 secondes pour le reste
     const isImageAnalysis = endpoint.includes('/analyze/');
-    const timeoutDuration = isImageAnalysis ? 30000 : 10000;
+    const timeoutDuration = isImageAnalysis ? 60000 : 60000;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
