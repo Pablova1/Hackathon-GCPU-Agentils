@@ -11,6 +11,8 @@ export default function NavigationFooter({ onScanClick }) {
     const path = router.pathname;
     if (path === '/home') {
       setActiveIcon('ampoule');
+    } else if (path === '/chat') {
+      setActiveIcon('bot');
     } else {
       setActiveIcon('scan');
     }
@@ -32,8 +34,9 @@ export default function NavigationFooter({ onScanClick }) {
   };
 
   const handleBotClick = () => {
-    // Le bouton bot reste mais ne fait rien pour l'instant
-    // Vous pouvez ajouter une fonction plus tard
+    // Rediriger vers la page de chat
+    setActiveIcon('bot');
+    router.push('/chat');
   };
 
   // Déterminer quelle icône est au centre
