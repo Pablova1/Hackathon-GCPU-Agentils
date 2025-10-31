@@ -22,7 +22,7 @@ export default function Home() {
       }
 
       try {
-        const data = await apiClient.get(`/api/meals/user/${userId}/home-stats`);
+        const data = await apiClient.get(`/meals/user/${userId}/home-stats`);
         setStats(data);
       } catch (err) {
         console.error('Error fetching stats:', err);
