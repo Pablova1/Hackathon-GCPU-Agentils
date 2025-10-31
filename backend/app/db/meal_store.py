@@ -27,7 +27,7 @@ async def create_meal(meal_data: MealCreate) -> dict:
         "name": meal_data.name,
         "ingredients": meal_data.ingredients,
         "nutrients": meal_data.nutrients.model_dump() if meal_data.nutrients else {},
-        "dateScanned": datetime.utcnow()
+        "dateScanned": datetime.now()
     }
     
     # Insérer dans MongoDB
@@ -276,7 +276,7 @@ async def get_home_stats(user_id: str) -> dict:
     total_meals = await count_user_meals(user_id)
     
     # Calendrier du mois en cours
-    now = datetime.utcnow()
+    now = datetime.now()
     monthly_calendar = await get_monthly_calendar(user_id, now.year, now.month)
     
     # Récupérer les plats de la semaine et calculer la note avec l'agent

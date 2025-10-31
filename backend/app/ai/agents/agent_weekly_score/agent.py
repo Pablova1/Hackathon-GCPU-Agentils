@@ -47,10 +47,10 @@ Critères d'évaluation :
 - Quantités raisonnables
 
 IMPORTANT : Retourne UNIQUEMENT un JSON valide avec cette structure :
-{
-  "score": 4.5,
-  "comment": "Excellente variété cette semaine ! Continue à intégrer des légumes."
-}
+{{
+  "score": 2.5,
+  "comment": "Moyenne variété cette semaine ! Continue à intégrer des légumes."
+}}
 
 Ne retourne RIEN d'autre que ce JSON, pas de texte avant ou après."""
     
