@@ -106,6 +106,30 @@
   stroke: #333;
 }
 
+.logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e74c3c;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.logoutButton:hover {
+  color: #c0392b;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.logoutButton:active {
+  transform: scale(0.95);
+}
+
 .title {
   color: #333;
   font-size: 1.5rem;

@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   
   // Optimisations de production
   compiler: {
@@ -50,9 +49,6 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: true,
   },
-  
-  // Optimiser le output
-  output: 'standalone',
 };
 
 module.exports = nextConfig;

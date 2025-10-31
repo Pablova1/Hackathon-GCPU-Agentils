@@ -40,27 +40,59 @@
   z-index: 100;
 }
 
-.backButton, .logoutButton {
+.backButton {
   background: white;
-  border: 2px solid #66BB6A;
-  border-radius: 12px;
-  width: 45px;
-  height: 45px;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 187, 106, 0.2);
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.backButton:hover, .logoutButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+.logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e74c3c;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
 }
 
-.backButton svg, .logoutButton svg {
-  stroke: #66BB6A;
+.backButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.logoutButton:hover {
+  color: #c0392b;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.logoutButton:active {
+  transform: scale(0.95);
+}
+
+.backButton svg {
+  stroke: #333;
+}
+
+.logoutButton svg {
+  stroke: currentColor;
 }
 
 .headerContent {

@@ -9,9 +9,9 @@ export default function NavigationFooter({ onScanClick }) {
   // Déterminer l'icône active en fonction de la route
   useEffect(() => {
     const path = router.pathname;
-    if (path === '/suggestion') {
+    if (path === '/home') {
       setActiveIcon('ampoule');
-    } else if (path === '/home') {
+    } else if (path === '/chat') {
       setActiveIcon('bot');
     } else {
       setActiveIcon('scan');
@@ -20,7 +20,7 @@ export default function NavigationFooter({ onScanClick }) {
 
   const handleAmpouleClick = () => {
     setActiveIcon('ampoule');
-    router.push('/suggestion');
+    router.push('/home');
   };
 
   const handleScanClick = () => {
@@ -34,8 +34,9 @@ export default function NavigationFooter({ onScanClick }) {
   };
 
   const handleBotClick = () => {
+    // Rediriger vers la page de chat
     setActiveIcon('bot');
-    router.push('/home');
+    router.push('/chat');
   };
 
   // Déterminer quelle icône est au centre
