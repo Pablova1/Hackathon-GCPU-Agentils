@@ -35,27 +35,48 @@
 }
 
 .backButton,
-.moreButton,
-.logoutButton {
+.moreButton {
   background: none;
   border: none;
   cursor: pointer;
   color: #333;
-  padding: 0.5rem;
+}
+
+.scanButton {
+  background: #66BB6A;
+  border: none;
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(102, 187, 106, 0.4);
+  transition: none;
 }
 
-.backButton:active,
-.moreButton:active,
-.logoutButton:active {
-  transform: scale(0.95);
+.scanButton:hover {
+  box-shadow: 0 6px 20px rgba(102, 187, 106, 0.5);
+  transform: none;
+}
+
+.scanButton:active,
+.scanButton:focus {
+  transform: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
   color: #e74c3c;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logoutButton:hover {
@@ -200,7 +221,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 16px rgba(102, 187, 106, 0.4);
-  transition: all 0.3s ease;
+  /* Removed transition to prevent movement */
 }
 
 .scanButton img {
@@ -208,12 +229,11 @@
 }
 
 .scanButton:hover {
-  transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(102, 187, 106, 0.5);
 }
 
 .scanButton:active {
-  transform: scale(0.95);
+  /* No transform to keep button in place */
 }
 
 /* Camera View */
@@ -530,7 +550,7 @@
   border-radius: 50%;
   color: #66BB6A;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  position: absolute;
+  position: relative;
   top: -35px;
   z-index: 100;
   border: none;
@@ -539,22 +559,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  min-width: 70px;
+  max-width: 70px;
 }
 
-/* Position du cercle blanc selon le bouton actif */
+/* Remove absolute positioning - let flexbox handle it */
 .footer button:nth-child(1).centerButton {
-  left: 16.66%; /* Ampoule à gauche - 1/6 de la largeur */
-  transform: translateX(-50%);
+  /* Ampoule à gauche */
 }
 
 .footer button:nth-child(2).centerButton {
-  left: 50%;
-  transform: translateX(-50%); /* Scan au centre parfait */
+  /* Scan au centre */
 }
 
 .footer button:nth-child(3).centerButton {
-  left: 83.33%; /* Bot à droite - 5/6 de la largeur */
-  transform: translateX(-50%);
+  /* Bot à droite */
 }
 
 .centerButton svg,
@@ -568,11 +589,7 @@
 .centerButton:hover {
   background: #f5f5f5;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-/* Hover pour tous les centerButton - tous utilisent translateX(-50%) maintenant */
-.footer button.centerButton:hover {
-  transform: translate(-50%, -12px);
+  transform: translateY(-12px);
 }
 
 /* Responsive */
@@ -951,6 +968,34 @@
 .addButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Error Toast */
+.errorToast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(231, 76, 60, 0.95);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* Analyzing Overlay */

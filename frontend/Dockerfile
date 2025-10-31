@@ -3,12 +3,12 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Copier package.json et lock file depuis le dossier frontend
-COPY frontend/package*.json ./
+COPY frontend/package.json ./
 
 # Installer les dépendances
-RUN npm ci
+RUN npm install
 
-# Copier le code source du frontend
+# Copier le code source du frontend (exclure node_modules via .dockerignore)
 COPY frontend/ .
 
 # Build Next.js

@@ -70,6 +70,11 @@ export default function ChatPage() {
     router.push('/');
   };
 
+  const handleProfileClick = () => {
+    // Rediriger vers la page d'onboarding pour modifier les réponses
+    router.push('/onboarding-new');
+  };
+
   // Fonction d'envoi de message
   const sendMessage = async (text) => {
     if (!text.trim()) return;
@@ -95,7 +100,7 @@ export default function ChatPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/chatbot/chat`, {
+      const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -278,7 +283,7 @@ export default function ChatPage() {
       formData.append('audio', audioBlob, 'audio.webm');
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/chatbot/stt`, {
+      const response = await fetch(`${apiUrl}/stt`, {
         method: 'POST',
         body: formData
       });
@@ -300,7 +305,7 @@ export default function ChatPage() {
         setVoiceConversation(prev => [...prev, userMessage]);
 
         // Étape 2: Obtenir la réponse du chatbot
-        const chatResponse = await fetch(`${apiUrl}/api/chatbot/chat`, {
+        const chatResponse = await fetch(`${apiUrl}/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -348,9 +353,10 @@ export default function ChatPage() {
     <div className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
-        <button className={styles.backButton} onClick={handleBackClick}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6"></polyline>
+        <button className={styles.profileIcon} onClick={handleProfileClick} title="Edit my profile">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
           </svg>
         </button>
         <h1 className={styles.title}>AI Assistant</h1>
