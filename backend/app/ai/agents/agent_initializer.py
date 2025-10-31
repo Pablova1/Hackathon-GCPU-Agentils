@@ -52,8 +52,7 @@ def get_nutrient_analyzer() -> NutrientAnalyzerAgent:
     if _nutrient_analyzer is None:
         try:
             _nutrient_analyzer = NutrientAnalyzerAgent(
-                project_id=settings.GCP_PROJECT_ID,
-                location=settings.GCP_LOCATION,
+                api_key=settings.GOOGLE_API_KEY,
                 model_name=settings.GEMINI_MODEL
             )
             logger.info("NutrientAnalyzerAgent initialisé")

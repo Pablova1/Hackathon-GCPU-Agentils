@@ -35,7 +35,7 @@ class OnboardingAgent:
         region: Optional[str] = None,
         system_prompt: Optional[str] = None,
         max_questions: int = 3,
-        load_env: bool = True
+        load_env: bool = False  # Changé à False par défaut pour Docker
     ):
         """
         Initialise l'agent d'onboarding.
@@ -70,13 +70,13 @@ class OnboardingAgent:
         
         # Récupération des variables d'environnement
         self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
-        self.project_id = project_id or os.getenv('GCP_PROJECT_ID') or os.getenv('PROJECT_ID')
+        self.project_id = project_id or os.getenv('GCP_PROJECT_ID') or os.getenv('PROJECT_ID') or os.getenv('GOOGLE_CLOUD_PROJECT')
         self.region = region or os.getenv('GCP_REGION') or os.getenv('REGION', 'us-central1')
         
         # Charger le system prompt avec un fallback
         self.system_prompt = system_prompt or os.getenv('AI_SYSTEM_PROMPT')
         if not self.system_prompt:
-            logger.warning("AI_SYSTEM_PROMPT not found in .env, using default prompt")
+            logger.warning("AI_SYSTEM_PROMPT not found in environment, using default prompt")
             self.system_prompt = (
                 "You are a caring nutrition assistant who asks questions to get to know the user better. "
                 "Here is the user's current context: {context}. "
@@ -96,7 +96,7 @@ class OnboardingAgent:
         
         if not self.api_key:
             raise ValueError(
-                "Clé API manquante. Définis GOOGLE_API_KEY ou API_KEY dans .env "
+                "Clé API manquante. Définis GOOGLE_API_KEY ou API_KEY dans les variables d'environnement "
                 "ou passe-la en paramètre."
             )
         
@@ -158,7 +158,7 @@ class OnboardingAgent:
     
     def _call_gemini_api(self, prompt: str, timeout: int = 20) -> Optional[str]:
         """
-        Appelle l'API Vertex AI Gemini.
+        Appelle l'API Gemini directement via la clé API.
         
         Args:
             prompt: Le prompt à envoyer à l'API
@@ -167,26 +167,14 @@ class OnboardingAgent:
         Returns:
             La réponse de l'IA ou None en cas d'erreur
         """
-        # Utiliser Vertex AI
         try:
-            from google.auth import default
-            from google.auth.transport.requests import Request
-            
-            # Obtenir les credentials par défaut (utilise GOOGLE_APPLICATION_CREDENTIALS ou gcloud auth)
-            credentials, _ = default()
-            
-            # Rafraîchir le token si nécessaire
-            if not credentials.valid:
-                credentials.refresh(Request())
-            
-            # Construire l'URL Vertex AI
-            model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-001')
-            url = f"https://{self.region}-aiplatform.googleapis.com/v1/projects/{self.project_id}/locations/{self.region}/publishers/google/models/{model}:generateContent"
+            # Utiliser l'API Gemini directement avec la clé API
+            model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp')
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
             
             payload = {
                 "contents": [
                     {
-                        "role": "user",
                         "parts": [{"text": prompt}]
                     }
                 ],
@@ -199,11 +187,10 @@ class OnboardingAgent:
             }
             
             headers = {
-                "Authorization": f"Bearer {credentials.token}",
                 "Content-Type": "application/json"
             }
             
-            logger.debug(f"Appel API Vertex AI: {url}")
+            logger.debug(f"Appel API Gemini: {url[:100]}...")
             response = requests.post(url, json=payload, headers=headers, timeout=timeout)
             response.raise_for_status()
             
@@ -215,19 +202,16 @@ class OnboardingAgent:
             
             return text
             
-        except ImportError:
-            logger.error("Bibliothèque google-auth non installée. Installez-la avec: pip install google-auth")
-            return None
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout lors de l'appel à l'API Vertex AI (>{timeout}s)")
+            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erreur HTTP lors de l'appel à l'API Vertex AI: {e}")
+            logger.error(f"Erreur HTTP lors de l'appel à l'API Gemini: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Réponse: {e.response.text}")
             return None
         except (KeyError, IndexError) as e:
-            logger.error(f"Format de réponse inattendu de l'API Vertex AI: {e}")
+            logger.error(f"Format de réponse inattendu de l'API Gemini: {e}")
             logger.debug(f"Données reçues: {data if 'data' in locals() else 'N/A'}")
             return None
         except Exception as e:

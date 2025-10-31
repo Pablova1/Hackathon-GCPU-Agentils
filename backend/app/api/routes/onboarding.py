@@ -8,6 +8,7 @@ Endpoints:
 - POST /answer: Enregistre une réponse et retourne la prochaine question (ancien mode)
 """
 
+import os
 from fastapi import APIRouter, HTTPException, Query, Body
 from app.db.session_store import create_session, get_session, update_session
 from app.db.user_store import create_user_document
@@ -199,16 +200,22 @@ async def submit_all_answers(request: AllAnswersRequest):
         
         logger.info(f"Profil complété avec succès pour l'utilisateur {request.user_id}")
         
-        # Générer une question IA de suivi
-        logger.info(f"Tentative de génération d'une question IA pour l'utilisateur {request.user_id}")
-        logger.debug(f"Slots pour l'IA: {complete_answers}")
+        # Générer une question IA de suivi seulement si ENABLE_AI_QUESTIONS est activé
+        enable_ai_questions = os.getenv("ENABLE_AI_QUESTIONS", "false").lower() == "true"
+        logger.info(f"ENABLE_AI_QUESTIONS = {enable_ai_questions}")
         
         ai_question = None
-        try:
-            ai_question = suggest_followup(complete_answers, 0)
-            logger.info(f"Question IA générée: {ai_question}")
-        except Exception as e:
-            logger.error(f"Erreur lors de la génération de la question IA: {e}", exc_info=True)
+        if enable_ai_questions:
+            logger.info(f"Tentative de génération d'une question IA pour l'utilisateur {request.user_id}")
+            logger.debug(f"Slots pour l'IA: {complete_answers}")
+            
+            try:
+                ai_question = suggest_followup(complete_answers, 0)
+                logger.info(f"Question IA générée: {ai_question}")
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération de la question IA: {e}", exc_info=True)
+        else:
+            logger.info("Questions IA désactivées (ENABLE_AI_QUESTIONS=false)")
         
         if ai_question:
             # Stocker la question IA dans la session
@@ -315,9 +322,15 @@ async def answer_question(request: AnswerRequest):
         except Exception as e:
             logger.error(f"ERREUR lors de la mise à jour des notes IA: {str(e)}", exc_info=True)
     
-    # Ensuite, proposer des questions IA supplémentaires (optionnelles)
-    asked_ai_count = sess.get("asked_ai_count", 0)
-    ai_question = suggest_followup(slots, asked_ai_count)
+    # Ensuite, proposer des questions IA supplémentaires (optionnelles) seulement si activé
+    enable_ai_questions = os.getenv("ENABLE_AI_QUESTIONS", "false").lower() == "true"
+    
+    ai_question = None
+    if enable_ai_questions:
+        asked_ai_count = sess.get("asked_ai_count", 0)
+        ai_question = suggest_followup(slots, asked_ai_count)
+    else:
+        logger.info("Questions IA désactivées (ENABLE_AI_QUESTIONS=false)")
     
     if ai_question:
         new_count = asked_ai_count + 1

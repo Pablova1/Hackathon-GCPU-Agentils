@@ -20,6 +20,7 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [editableAliments, setEditableAliments] = useState([]);
   const [showSuggestionCard, setShowSuggestionCard] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
@@ -191,11 +192,7 @@ export default function Home() {
     if (window.capturedBlob) {
       const file = new File([window.capturedBlob], 'captured-photo.jpg', { type: 'image/jpeg' });
       
-      // Revenir immédiatement à la caméra
-      setSelectedImage(null);
-      startCamera();
-      
-      // Lancer l'analyse en arrière-plan
+      // Lancer l'analyse (ne pas revenir à la caméra)
       analyzeImage(file);
     }
   };
@@ -215,6 +212,7 @@ export default function Home() {
   const analyzeImage = async (file) => {
     setIsAnalyzing(true);
     setAnalysisResult(null);
+    setErrorMessage(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -223,18 +221,33 @@ export default function Home() {
       const data = await apiClient.post('/api/analyze/plate', formData);
       
       console.log('Résultat analyse:', data);
-      setAnalysisResult(data);
-      setEditableAliments(data.aliments || []);
       
-      // Display success message
+      // Vérifier si des aliments ont été détectés
       if (data.aliments && data.aliments.length > 0) {
+        setAnalysisResult(data);
+        setEditableAliments(data.aliments || []);
         console.log(`${data.nombre_aliments} food item(s) detected!`);
       } else {
-        alert('No food detected. Please try again with a better photo.');
+        // Aucun aliment détecté - revenir à la caméra
+        setErrorMessage('No food detected. Please try again with a better photo.');
+        setSelectedImage(null);
+        setAnalysisResult(null);
+        setEditableAliments([]);
+        startCamera();
+        
+        // Effacer le message d'erreur après 3 secondes
+        setTimeout(() => setErrorMessage(null), 3000);
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      alert('Error analyzing image. Please try again.');
+      setErrorMessage('Error analyzing image. Please try again.');
+      setSelectedImage(null);
+      setAnalysisResult(null);
+      setEditableAliments([]);
+      startCamera();
+      
+      // Effacer le message d'erreur après 3 secondes
+      setTimeout(() => setErrorMessage(null), 3000);
     } finally {
       setIsAnalyzing(false);
     }
@@ -247,34 +260,38 @@ export default function Home() {
   };
 
   const handleValidateAliments = async () => {
+  setIsAnalyzing(false);
+  setSelectedImage(null);
+  setAnalysisResult(null);
+  setEditableAliments([]);
+  setIsAnalyzing(false);
     if (editableAliments.length === 0) {
-      alert('No food items to validate.');
+      setErrorMessage('No food items to validate.');
+      setTimeout(() => setErrorMessage(null), 3000);
       return;
     }
 
-    try {
-      setIsAnalyzing(true);
-      
-      const data = await apiClient.post('/api/analyze/nutrients', editableAliments);
-      
-      console.log('Meal validated:', data);
-      
-      alert(`✅ Meal saved successfully!\n\nID: ${data.meal_id}\n\nSuggestions are being generated...`);
-      
-      // Reset interface
-      setSelectedImage(null);
-      setAnalysisResult(null);
-      setEditableAliments([]);
-      
-      // Optional: redirect to suggestions page
-      // router.push('/suggestion');
-      
-    } catch (error) {
-      console.error('Validation error:', error);
-      alert('Error saving meal. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
+    // Reset UI and return to camera immediately
+    setIsAnalyzing(false);
+    setSelectedImage(null);
+    setAnalysisResult(null);
+    setEditableAliments([]);
+    startCamera();
+
+    // Show toast confirmation
+    setErrorMessage('Meal is being analyzed in the background. You can scan another plate!');
+    setTimeout(() => setErrorMessage(null), 3000);
+
+    // Launch API call in background
+    setTimeout(async () => {
+      try {
+        await apiClient.post('/api/analyze/nutrients', editableAliments);
+        // Optionally show a success toast
+      } catch (error) {
+        console.error('Validation error:', error);
+        // Optionally show an error toast
+      }
+    }, 100);
   };
 
   const handleAddAliment = () => {
@@ -321,6 +338,13 @@ export default function Home() {
 
       {/* Zone principale - Photo ou Scan */}
       <main className={styles.mainContent}>
+        {/* Message d'erreur discret en haut */}
+        {errorMessage && (
+          <div className={styles.errorToast}>
+            {errorMessage}
+          </div>
+        )}
+
         {/* Input file caché pour sélectionner une image */}
         <input
           type="file"
@@ -330,7 +354,21 @@ export default function Home() {
           style={{ display: 'none' }}
         />
         
-        {selectedImage && !analysisResult ? (
+        {/* État : En cours d'analyse */}
+        {isAnalyzing && selectedImage && (
+          <div className={styles.scanContainer}>
+            <div className={styles.cameraView}>
+              <img src={selectedImage} alt="Analyzing" className={styles.capturedImage} />
+              <div className={styles.analyzingOverlay}>
+                <div className={styles.spinner}></div>
+                <p className={styles.analyzingText}>Analysing plate...</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* État : Photo capturée, en attente de validation */}
+        {selectedImage && !isAnalyzing && !analysisResult && (
           // Affichage de la photo capturée dans le même bloc que la caméra
           <div className={styles.scanContainer}>
             <div className={styles.cameraView}>
@@ -356,37 +394,28 @@ export default function Home() {
             </div>
             <div className={styles.buttonGroup}>
               <button className={styles.scanButton} onClick={handleCapturePhoto}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
+                <img src="/Calendar.svg" alt="Calendar" width="32" height="32" />
               </button>
               <button className={styles.galleryButton} onClick={handleGalleryClick}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
+                <img src="/picture.svg" alt="Gallery" width="32" height="32" />
               </button>
             </div>
           </div>
-        ) : analysisResult ? (
+        )}
+        
+        {/* État : Résultats de l'analyse - Afficher uniquement les résultats sans la caméra */}
+        {analysisResult && !isAnalyzing && (
           <div className={styles.analysisContainer}>
             <div className={styles.imageSection}>
               <img src={selectedImage} alt="Selected image" className={styles.selectedImage} />
               
-              {/* Indicateur de chargement pendant l'analyse */}
-              {isAnalyzing && (
-                <div className={styles.analyzingOverlay}>
-                  <div className={styles.spinner}></div>
-                  <p className={styles.analyzingText}>Analyzing...</p>
-                </div>
-              )}
-              
+              {/* Bouton croix pour revenir au scannage */}
               <button className={styles.closeImage} onClick={() => {
                 setSelectedImage(null);
                 setAnalysisResult(null);
                 setEditableAliments([]);
+                // Redémarrer la caméra
+                startCamera();
               }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/>
@@ -396,81 +425,70 @@ export default function Home() {
             </div>
             
             {/* Panneau d'édition des aliments */}
-            {analysisResult && (
-              <div className={styles.editPanel}>
-                <div className={styles.editHeader}>
-                  <h3>{editableAliments.length} food item(s) detected</h3>
-                  <p className={styles.editSubtitle}>Edit quantities if needed</p>
-                </div>
-                
-                <div className={styles.alimentEditList}>
-                  {editableAliments.map((aliment, index) => (
-                    <div key={index} className={styles.alimentEditItem}>
-                      <input
-                        type="text"
-                        value={aliment.name}
-                        onChange={(e) => handleAlimentChange(index, 'name', e.target.value)}
-                        className={styles.alimentNameInput}
-                        placeholder="Food name"
-                        disabled={isAnalyzing}
-                      />
-                      <div className={styles.quantityControl}>
-                        <input
-                          type="number"
-                          value={aliment.estimated_quantity}
-                          onChange={(e) => handleAlimentChange(index, 'estimated_quantity', parseInt(e.target.value) || 0)}
-                          className={styles.alimentQuantityInput}
-                          min="0"
-                          disabled={isAnalyzing}
-                        />
-                        <span className={styles.unit}>g</span>
-                      </div>
-                      <button 
-                        className={styles.deleteButton}
-                        onClick={() => handleDeleteAliment(index)}
-                        title="Delete"
-                        disabled={isAnalyzing}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className={styles.editActions}>
-                  <button 
-                    className={styles.addButton} 
-                    onClick={handleAddAliment}
-                    disabled={isAnalyzing}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Add food item
-                  </button>
-                  <button 
-                    className={styles.validateButton} 
-                    onClick={handleValidateAliments}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <div className={styles.buttonSpinner}></div>
-                        Saving...
-                      </>
-                    ) : (
-                      'Validate'
-                    )}
-                  </button>
-                </div>
+            <div className={styles.editPanel}>
+              <div className={styles.editHeader}>
+                <h3>{editableAliments.length} food item(s) detected</h3>
+                <p className={styles.editSubtitle}>Edit quantities if needed</p>
               </div>
-            )}
+              
+              <div className={styles.alimentEditList}>
+                {editableAliments.map((aliment, index) => (
+                  <div key={index} className={styles.alimentEditItem}>
+                    <input
+                      type="text"
+                      value={aliment.name}
+                      onChange={(e) => handleAlimentChange(index, 'name', e.target.value)}
+                      className={styles.alimentNameInput}
+                      placeholder="Food name"
+                    />
+                    <div className={styles.quantityControl}>
+                      <input
+                        type="number"
+                        value={aliment.estimated_quantity}
+                        onChange={(e) => handleAlimentChange(index, 'estimated_quantity', parseInt(e.target.value) || 0)}
+                        className={styles.alimentQuantityInput}
+                        min="0"
+                      />
+                      <span className={styles.unit}>g</span>
+                    </div>
+                    <button 
+                      className={styles.deleteButton}
+                      onClick={() => handleDeleteAliment(index)}
+                      title="Delete"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className={styles.editActions}>
+                <button 
+                  className={styles.addButton} 
+                  onClick={handleAddAliment}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add food item
+                </button>
+                <button 
+                  className={styles.validateButton} 
+                  onClick={handleValidateAliments}
+                >
+                  {'Validate'}
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
+        )}
+        
+        {/* État : Vue caméra normale (pas de photo sélectionnée, pas de résultats) */}
+        {!selectedImage && !analysisResult && !isAnalyzing && (
           <div className={styles.scanContainer}>
             <div className={styles.cameraView}>
               <video 

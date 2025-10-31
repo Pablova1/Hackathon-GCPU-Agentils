@@ -35,6 +35,7 @@ class Settings:
     UPLOAD_DIR: Path = UPLOAD_DIR
     
     # Google Cloud / Vertex AI
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
     GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")

@@ -1,15 +1,14 @@
 """
-Agent for analyzing macro-nutrients and micro-nutrients based on a list of aliments via Vertex AI.
+Agent for analyzing macro-nutrients and micro-nutrients based on a list of aliments via Google Gemini API.
 """
 
 import os
 import json
 import logging
+import requests
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from pathlib import Path
-from vertexai.generative_models import GenerativeModel
-import vertexai
 
 # Configure logging
 logging.basicConfig(
@@ -77,43 +76,83 @@ class NutrientAnalyzerAgent:
 
     def __init__(
         self,
-        project_id: Optional[str] = None,
-        location: Optional[str] = None,
+        api_key: Optional[str] = None,
         model_name: str = "gemini-2.0-flash-001",
-        load_env: bool = True
+        load_env: bool = False
     ):
         """
-        Initialize the NutrientAnalyzerAgent.
+        Initialize the NutrientAnalyzerAgent with Google Gemini API.
         
         Args:
-            project_id: Google Cloud Project ID
-            location: Google Cloud Location (e.g., 'europe-west4')
-            model_name: Nom du modèle Gemini à utiliser
-            load_env: Si True, charge les variables d'environnement depuis .env
+            api_key: Google API Key for Gemini
+            model_name: Name of the Gemini model to use
+            load_env: If True, loads environment variables from .env
         """
         if load_env:
-            # Remonter 6 niveaux pour atteindre la racine du projet
-            # agent.py -> agent_assiette_1 -> agents -> ai -> app -> backend -> PROJECT_ROOT
+            # Go up 6 levels to reach project root
             env_path = Path(__file__).parent.parent.parent.parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
         
-        # Configuration Vertex AI
-        self.project_id = project_id or os.getenv('GCP_PROJECT_ID')
-        self.location = location or os.getenv('GCP_LOCATION', 'us-central1')
+        # Get API key
+        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
         
-        if not self.project_id:
+        if not self.api_key:
             raise ValueError(
-                "GCP_PROJECT_ID manquant. "
-                "Définissez GCP_PROJECT_ID dans .env"
+                "GOOGLE_API_KEY missing. "
+                "Set GOOGLE_API_KEY in .env or pass it as parameter"
             )
         
-        # Initialiser Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
         self.model_name = model_name
-        self.model = GenerativeModel(model_name)
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
         
-        logger.info(f"NutrientAnalyzerAgent initialisé avec le modèle {model_name} sur Vertex AI")
-        logger.info(f"Project: {self.project_id}, Location: {self.location}")
+        logger.info(f"NutrientAnalyzerAgent initialized with model {model_name}")
+
+    def _call_gemini_api(self, prompt: str) -> str:
+        """
+        Call Google Gemini API.
+        
+        Args:
+            prompt: The prompt to send
+            
+        Returns:
+            Model response text
+        """
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.1,
+                "topK": 32,
+                "topP": 1,
+                "maxOutputTokens": 8192,
+            }
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.api_url}?key={self.api_key}",
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            response_text = result['candidates'][0]['content']['parts'][0]['text']
+            
+            logger.info("Response received from Gemini API")
+            return response_text
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error calling Gemini API: {e}")
+            raise ValueError(f"Gemini API Error: {e}")
 
     def _parse_response(self, response_text: str) -> Dict:
         """
@@ -151,71 +190,39 @@ class NutrientAnalyzerAgent:
         Analyze the macro-nutrients and micro-nutrients for each aliment using the Google API.
 
         Args:
-            aliments: A list of dictionaries, each containing 'nom' and 'quantite_estimee'.
+            aliments: A list of dictionaries, each containing 'name' and 'estimated_quantity'.
 
         Returns:
             A dictionary containing detailed nutrient information.
         """
-        logger.info(f"Analyse nutritionnelle de {len(aliments)} aliments...")
+        logger.info(f"Analyzing nutritional information for {len(aliments)} food items...")
         
-        # Convertit la liste d'aliments en JSON
+        # Convert food list to JSON
         aliments_json = json.dumps(aliments, indent=2, ensure_ascii=False)
         
-        # Formate le prompt
+        # Format the prompt
         prompt = self.PROMPT_TEMPLATE.format(aliments_json=aliments_json)
         
-        
         try:
-            # Appel à Vertex AI Gemini
-            print("Appel à Vertex AI Gemini...")
-            response_text = self._call_gemini_text(prompt)
+            # Call Gemini API
+            logger.info("Calling Gemini API...")
+            response_text = self._call_gemini_api(prompt)
             
-            # Parse la réponse
+            # Parse the response
             result = self._parse_response(response_text)
             
-            logger.info("Analyse nutritionnelle terminée avec succès")
+            logger.info("Nutritional analysis completed successfully")
             
             return result
             
         except json.JSONDecodeError as e:
-            logger.error(f"Erreur de décodage JSON: {e}")
-            print(f"Erreur: Impossible de décoder la réponse JSON de l'API.")
+            logger.error(f"JSON decode error: {e}")
+            print(f"Error: Unable to decode JSON response from the API.")
             raise ValueError("Failed to decode the JSON response from the API.")
         except Exception as e:
-            logger.error(f"Erreur lors de l'analyse nutritionnelle: {e}")
-            print(f"Erreur: {e}")
+            logger.error(f"Error during nutritional analysis: {e}")
+            print(f"Error: {e}")
             raise RuntimeError(f"An error occurred while analyzing nutrients: {e}")
-    
-    def _call_gemini_text(self, prompt: str) -> str:
-        """
-        Appelle Vertex AI Gemini avec un prompt texte.
-        
-        Args:
-            prompt: Le prompt à envoyer
-            
-        Returns:
-            La réponse de l'IA
-        """
-        try:
-            logger.debug(f"Appel Vertex AI Gemini")
-            response = self.model.generate_content(
-                prompt,
-                generation_config={
-                    "temperature": 0.4,
-                    "max_output_tokens": 4096,
-                    "top_p": 0.9,
-                    "top_k": 40
-                }
-            )
-            
-            text = response.text.strip()
-            logger.debug(f"Réponse Vertex AI: {text[:100]}...")
-            
-            return text
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de l'appel à Vertex AI: {e}")
-            raise Exception(f"Erreur Vertex AI: {str(e)}")
 
     def format_results(self, result: Dict) -> str:
         """

@@ -35,7 +35,7 @@ class WeeklyScoreAgent:
         project_id: Optional[str] = None,
         region: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        load_env: bool = True
+        load_env: bool = False  # Changé à False pour Docker
     ):
         """
         Initialise l'agent de notation hebdomadaire.
@@ -54,23 +54,24 @@ class WeeklyScoreAgent:
             load_dotenv(dotenv_path=env_path, override=True)
         
         # Récupération des variables d'environnement
-        self.project_id = project_id or os.getenv('GCP_PROJECT_ID') or os.getenv('PROJECT_ID')
+        self.api_key = api_key or os.getenv('GOOGLE_API_KEY') or os.getenv('API_KEY')
+        self.project_id = project_id or os.getenv('GCP_PROJECT_ID') or os.getenv('PROJECT_ID') or os.getenv('GOOGLE_CLOUD_PROJECT')
         self.region = region or os.getenv('GCP_LOCATION') or os.getenv('GCP_REGION') or os.getenv('REGION', 'europe-west4')
         self.system_prompt = system_prompt or os.getenv('WEEKLY_SCORE_SYSTEM_PROMPT')
         
         if not self.system_prompt:
             raise ValueError(
-                "System prompt manquant. Définis WEEKLY_SCORE_SYSTEM_PROMPT dans .env "
+                "System prompt manquant. Définis WEEKLY_SCORE_SYSTEM_PROMPT dans les variables d'environnement "
                 "ou passe-le en paramètre."
             )
         
-        if not self.project_id:
+        if not self.api_key:
             raise ValueError(
-                "Project ID manquant. Définis GCP_PROJECT_ID dans .env "
-                "ou passe-le en paramètre."
+                "Clé API manquante. Définis GOOGLE_API_KEY dans les variables d'environnement "
+                "ou passe-la en paramètre."
             )
         
-        logger.info("Agent WeeklyScore initialisé avec Vertex AI")
+        logger.info("Agent WeeklyScore initialisé avec l'API Gemini")
     
     def calculate_score(self, meals: List[Dict]) -> Optional[Dict]:
         """
@@ -154,7 +155,7 @@ class WeeklyScoreAgent:
     
     def _call_vertex_ai(self, prompt: str, timeout: int = 20) -> Optional[str]:
         """
-        Appelle Vertex AI avec le modèle Gemini.
+        Appelle l'API Gemini directement via la clé API.
         
         Args:
             prompt: Le prompt à envoyer
@@ -163,26 +164,14 @@ class WeeklyScoreAgent:
         Returns:
             La réponse de l'IA ou None en cas d'erreur
         """
-        # Utiliser Vertex AI
         try:
-            from google.auth import default
-            from google.auth.transport.requests import Request
-            
-            # Obtenir les credentials par défaut (utilise GOOGLE_APPLICATION_CREDENTIALS ou gcloud auth)
-            credentials, _ = default()
-            
-            # Rafraîchir le token si nécessaire
-            if not credentials.valid:
-                credentials.refresh(Request())
-            
-            # Construire l'URL Vertex AI
-            model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-001')
-            url = f"https://{self.region}-aiplatform.googleapis.com/v1/projects/{self.project_id}/locations/{self.region}/publishers/google/models/{model}:generateContent"
+            # Utiliser l'API Gemini directement avec la clé API
+            model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp')
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
             
             payload = {
                 "contents": [
                     {
-                        "role": "user",
                         "parts": [{"text": prompt}]
                     }
                 ],
@@ -195,11 +184,10 @@ class WeeklyScoreAgent:
             }
             
             headers = {
-                "Authorization": f"Bearer {credentials.token}",
                 "Content-Type": "application/json"
             }
             
-            logger.debug(f"Appel Vertex AI - Projet: {self.project_id}, Région: {self.region}, Modèle: {model}")
+            logger.debug(f"Appel API Gemini pour calcul de score hebdomadaire")
             response = requests.post(url, json=payload, headers=headers, timeout=timeout)
             response.raise_for_status()
             
@@ -209,14 +197,11 @@ class WeeklyScoreAgent:
             logger.debug(f"Réponse reçue: {text[:100]}...")
             return text
             
-        except ImportError:
-            logger.error("Bibliothèque google-auth non installée. Installez-la avec: pip install google-auth")
-            return None
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout lors de l'appel à Vertex AI (>{timeout}s)")
+            logger.error(f"Timeout lors de l'appel à l'API Gemini (>{timeout}s)")
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erreur HTTP Vertex AI: {e}")
+            logger.error(f"Erreur HTTP Gemini: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Détails de l'erreur: {e.response.text}")
             return None

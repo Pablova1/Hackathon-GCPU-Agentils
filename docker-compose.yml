@@ -36,6 +36,8 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GCP_PROJECT_ID=${GOOGLE_CLOUD_PROJECT}
       - WEEKLY_SCORE_SYSTEM_PROMPT=${WEEKLY_SCORE_SYSTEM_PROMPT}
+      - AI_SYSTEM_PROMPT=${AI_SYSTEM_PROMPT}
+      - ENABLE_AI_QUESTIONS=${ENABLE_AI_QUESTIONS}
     volumes:
       - ./backend:/app/backend
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload

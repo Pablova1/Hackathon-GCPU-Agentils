@@ -9,11 +9,12 @@ export default function Home() {
   const router = useRouter();
   const { isAuthenticated, isLoading, userId, logout } = useAuth();
   const [stats, setStats] = useState(null);
+  const [mealSuggestions, setMealSuggestions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (isLoading) return;
 
       if (!isAuthenticated || !userId) {
@@ -22,17 +23,33 @@ export default function Home() {
       }
 
       try {
-        const data = await apiClient.get(`/api/meals/user/${userId}/home-stats`);
-        setStats(data);
+        // Charger les stats ET les suggestions en parallèle
+        const [statsData, suggestionsData] = await Promise.all([
+          apiClient.get(`/api/meals/user/${userId}/home-stats`),
+          apiClient.get(`/api/suggestions/meals/${userId}`)
+        ]);
+
+        console.log('Stats data:', statsData);
+        console.log('Suggestions data:', suggestionsData);
+
+        setStats(statsData);
+        // Correction : lire la clé last_suggestion.meal_suggestions si elle existe
+        if (suggestionsData.last_suggestion && suggestionsData.last_suggestion.meal_suggestions) {
+          setMealSuggestions({ meal_suggestions: suggestionsData.last_suggestion.meal_suggestions });
+        } else if (suggestionsData.meal_suggestions) {
+          setMealSuggestions({ meal_suggestions: suggestionsData.meal_suggestions });
+        } else {
+          setMealSuggestions({ meal_suggestions: [] });
+        }
       } catch (err) {
-        console.error('Error fetching stats:', err);
+        console.error('Error fetching data:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, [router, isAuthenticated, isLoading, userId]);
 
   const handleBackClick = () => {
@@ -114,7 +131,7 @@ export default function Home() {
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
-        <h1 className={styles.title}>My Statistics</h1>
+        <h1 className={styles.title}>My profils</h1>
         <button className={styles.logoutButton} onClick={handleLogout} title="Logout">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -125,6 +142,55 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
+        {/* Meal Suggestions Section */}
+        {mealSuggestions && (
+          <div className={styles.suggestionsSection}>
+            <h2 className={styles.sectionTitle}>🍽️ Meal Suggestions for You</h2>
+            
+            {mealSuggestions.meal_suggestions && mealSuggestions.meal_suggestions.length > 0 ? (
+              <>
+                <div className={styles.mealSuggestionsList}>
+                  {mealSuggestions.meal_suggestions.slice(0, 3).map((suggestion, index) => (
+                    <div key={index} className={styles.mealSuggestionCard}>
+                      <div className={styles.mealHeader}>
+                        <h3 className={styles.mealName}>{suggestion.name}</h3>
+                        <span className={styles.mealTime}>{suggestion.meal_time}</span>
+                      </div>
+                      <p className={styles.mealDescription}>{suggestion.description}</p>
+                      {suggestion.calories && (
+                        <div className={styles.mealCalories}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9800" strokeWidth="2">
+                            <path d="M12 2v20M2 12h20"/>
+                          </svg>
+                          <span>{suggestion.calories} kcal</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {mealSuggestions.meal_suggestions.length > 3 && (
+                  <button 
+                    className={styles.viewAllButton}
+                    onClick={() => router.push('/suggestion')}
+                  >
+                    View All Suggestions ({mealSuggestions.meal_suggestions.length})
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={styles.noSuggestions}>
+                <p>📸 Scan your first meal to get personalized suggestions!</p>
+                <button 
+                  className={styles.scanButton}
+                  onClick={() => router.push('/')}
+                >
+                  Scan a Meal
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Total scanned meals */}
         <div className={styles.statCard}>
           <div className={styles.statIcon}>
