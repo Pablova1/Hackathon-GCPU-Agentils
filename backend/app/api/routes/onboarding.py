@@ -9,7 +9,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Body
 from app.db.session_store import create_session, get_session, update_session
 from app.db.user_store import create_user_document
-from app.services.onboarding_planner import QUESTION_BANK, first_question, next_required_slot, question_for_slot
+from app.services.onboarding_planner import QUESTION_BANK, FULL_QUESTION_BANK, first_question, next_required_slot, question_for_slot
 from app.ai.agents.agent_onboarding.agent import suggest_followup
 from pydantic import BaseModel
 from datetime import datetime
@@ -25,6 +25,129 @@ class AnswerRequest(BaseModel):
     session_id: str
     slot: str
     value: str | int | float
+
+
+class SubmitAllRequest(BaseModel):
+    user_id: str
+    answers: dict
+
+
+@router.get("/questions")
+async def get_all_questions():
+    """
+    Retourne toutes les questions du formulaire d'onboarding.
+    Utilisé par le frontend pour afficher le formulaire complet.
+    """
+    questions = []
+    for slot, question_data in FULL_QUESTION_BANK.items():
+        question = dict(question_data)  # copie
+        question["slot"] = slot
+        questions.append(question)
+    
+    return {"questions": questions}
+
+
+@router.post("/submit-all")
+async def submit_all_answers(request: SubmitAllRequest):
+    """
+    Soumet toutes les réponses d'onboarding en une seule fois.
+    Crée ou met à jour le profil utilisateur.
+    """
+    from app.db.mongo_client import get_database
+    
+    db = await get_database()
+    users = db["user"]
+    
+    # Récupérer l'utilisateur existant
+    user = await users.find_one({"user_id": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    # Calculer l'âge depuis la date de naissance
+    age = 0
+    if "birthDate" in request.answers:
+        try:
+            birth_date = datetime.strptime(request.answers["birthDate"], "%Y-%m-%d")
+            today = datetime.now()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        except:
+            age = 0
+    
+    # Préparer les données pour la mise à jour du profil
+    update_data = {
+        "profile_completed": True,
+        "onboarding_responses": request.answers,  # Stocker toutes les réponses
+        "profile.age": age,
+        "profile.gender": request.answers.get("gender", "Other"),
+        "profile.weight": float(request.answers.get("weightKg", 0)) if request.answers.get("weightKg") else 0.0,
+        "profile.height": float(request.answers.get("heightCm", 0)) if request.answers.get("heightCm") else 0.0,
+        "profile.bodyType": request.answers.get("bodyType", "unknown"),
+        "nutrition.diet": request.answers.get("dietType"),
+        "misc.activityLevel": request.answers.get("activityLevel"),
+    }
+    
+    # Ajouter les champs optionnels s'ils existent
+    if request.answers.get("allergies"):
+        update_data["medical.allergies"] = request.answers.get("allergies")
+    if request.answers.get("intolerances"):
+        update_data["nutrition.intolerances"] = request.answers.get("intolerances")
+    if request.answers.get("treatments"):
+        update_data["medical.treatments"] = request.answers.get("treatments")
+    if request.answers.get("medicalHistoryPersonal"):
+        update_data["medical.medicalHistory.personal"] = request.answers.get("medicalHistoryPersonal")
+    if request.answers.get("medicalHistoryFamily"):
+        update_data["medical.medicalHistory.family"] = request.answers.get("medicalHistoryFamily")
+    if request.answers.get("birthControl"):
+        update_data["medical.birthControl"] = request.answers.get("birthControl")
+    if request.answers.get("foodLikes"):
+        update_data["nutrition.preferences"] = {"liked": request.answers.get("foodLikes")}
+    if request.answers.get("goalDetail"):
+        update_data["goals.goalDetail"] = request.answers.get("goalDetail")
+    if request.answers.get("religiousPracticing"):
+        update_data["religiousRestrictions.practicing"] = request.answers.get("religiousPracticing")
+    if request.answers.get("religiousType"):
+        update_data["religiousRestrictions.type"] = request.answers.get("religiousType")
+    if request.answers.get("sports"):
+        update_data["misc.sports"] = request.answers.get("sports")
+    if request.answers.get("occupation"):
+        update_data["misc.occupation"] = request.answers.get("occupation")
+    if request.answers.get("additionalNotes"):
+        update_data["misc.notes"] = request.answers.get("additionalNotes")
+    
+    # Mettre à jour l'utilisateur
+    await users.update_one(
+        {"user_id": request.user_id},
+        {"$set": update_data}
+    )
+    
+    # Vérifier si on doit générer une question IA
+    ai_question = None
+    try:
+        # Suggérer une question IA basée sur les réponses
+        ai_question = suggest_followup(request.answers, 0)
+        logger.info(f"Question IA générée: {ai_question is not None}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération de question IA: {e}")
+    
+    response = {
+        "success": True,
+        "message": "Profile updated successfully",
+        "profile_completed": True
+    }
+    
+    # Ajouter la question IA si elle existe
+    if ai_question:
+        response["ai_question"] = ai_question
+        # Créer une session temporaire pour les questions IA
+        try:
+            session = await create_session(request.user_id)
+            response["session_id"] = session["session_id"]
+            # Stocker les réponses existantes dans la session
+            await update_session(session["session_id"], {"slots": request.answers})
+        except Exception as e:
+            logger.error(f"Erreur lors de la création de session IA: {e}")
+    
+    return response
 
 
 @router.post("/start")

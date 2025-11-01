@@ -12,6 +12,7 @@ from .profile import router as profile_router
 from .session import router as session_router
 from .auth import router as auth_router
 from .meal_suggestions import router as meal_suggestions_router
+from .meal_router import router as meal_router
 from .suggestions import router as suggestions_router
 from .chatbot import router as chatbot_router
 from .summary import router as summary_router
@@ -50,6 +51,12 @@ api_router.include_router(
     tags=["Sessions"]
 )
 
+
+api_router.include_router(
+    meal_router,
+    prefix="/meals",
+    tags=["Meals"]
+)
 
 api_router.include_router(
     meal_suggestions_router,

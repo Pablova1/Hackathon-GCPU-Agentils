@@ -43,8 +43,13 @@ async def speech_to_text_service(audio: UploadFile) -> TranscriptResponse:
                 "sampleRateHertz": 48000,
                 "audioChannelCount": 2,
                 "languageCode": "fr-FR",
+                "alternativeLanguageCodes": ["en-US"],
                 "model": "latest_short",
-                "enableAutomaticPunctuation": True
+                "enableAutomaticPunctuation": True,
+                "useEnhanced": True,
+                "enableWordTimeOffsets": False,
+                "enableWordConfidence": False,
+                "maxAlternatives": 1
             }
             logger.info("🔧 Configuration WebM/Opus (stéréo)")
         else:
@@ -52,9 +57,12 @@ async def speech_to_text_service(audio: UploadFile) -> TranscriptResponse:
             config = {
                 "encoding": "LINEAR16",
                 "sampleRateHertz": 16000,
+                "audioChannelCount": 1,
                 "languageCode": "fr-FR",
+                "alternativeLanguageCodes": ["en-US"],
                 "model": "latest_short",
-                "enableAutomaticPunctuation": True
+                "enableAutomaticPunctuation": True,
+                "useEnhanced": True
             }
             logger.info("🔧 Configuration générique")
         
@@ -80,6 +88,9 @@ async def speech_to_text_service(audio: UploadFile) -> TranscriptResponse:
         if response.status_code == 200:
             data = response.json()
             
+            # Log de la réponse complète pour debug
+            logger.info(f"📋 Réponse complète: {data}")
+            
             if "results" in data and len(data["results"]) > 0:
                 result = data["results"][0]["alternatives"][0]
                 transcript = result["transcript"]
@@ -97,13 +108,22 @@ async def speech_to_text_service(audio: UploadFile) -> TranscriptResponse:
                     model_used=config.get('model', 'unknown')
                 )
             else:
-                logger.warning("⚠️ Aucun résultat de transcription")
+                logger.warning(f"⚠️ Aucun résultat de transcription. Réponse: {data}")
+                total_latency = (time.time() - start_time) * 1000
+                
+                # Vérifier si c'est un problème de silence/audio vide
+                error_msg = "Aucun texte détecté dans l'audio"
+                if "error" in data:
+                    error_msg = data["error"].get("message", error_msg)
+                elif not data.get("results"):
+                    error_msg = "L'audio est peut-être trop court, silencieux ou de mauvaise qualité"
+                
                 return TranscriptResponse(
                     transcript="",
                     text="", 
                     confidence=0.0, 
-                    error="Aucun texte détecté dans l'audio",
-                    latency_ms=int((time.time() - start_time) * 1000)
+                    error=error_msg,
+                    latency_ms=int(total_latency)
                 )
         else:
             error_detail = response.text

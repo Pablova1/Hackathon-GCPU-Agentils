@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Output standalone pour Docker optimisé (requis pour Cloud Run)
+  output: 'standalone',
+  
   // Optimisations de production
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
@@ -46,7 +49,12 @@ const nextConfig = {
   
   // Configuration des images
   images: {
-    domains: ['localhost'],
+    domains: [
+      'localhost',
+      'agentils-backend-807842718393.europe-west1.run.app',
+      'agentils-frontend-807842718393.europe-west1.run.app',
+      'storage.googleapis.com'
+    ],
     unoptimized: true,
   },
 };
