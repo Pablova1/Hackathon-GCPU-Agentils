@@ -9,18 +9,23 @@ from app.models.user import (
 
 async def create_user_document(user_id: str, slots: dict) -> dict:
     """
-    Crée un UserDocument à partir des slots d'onboarding.
-    Sauvegarde dans MongoDB et retourne le document créé.
+    Met à jour le profil nutritionnel d'un utilisateur existant (après onboarding).
+    NE crée PAS un nouvel utilisateur - l'utilisateur doit avoir été créé lors de l'inscription.
     
     Args:
-        user_id: ID de l'utilisateur
-        slots: dictionnaire contenant les réponses (clés: slot names)
+        user_id: ID de l'utilisateur existant
+        slots: dictionnaire contenant les réponses d'onboarding (clés: slot names)
     
     Returns:
-        Le document utilisateur créé (avec _id MongoDB)
+        Le document utilisateur mis à jour (avec profil complet)
     """
     db = await get_database()
     users_collection = db["user"]  # Collection 'user' au singulier
+    
+    # Vérifier que l'utilisateur existe
+    existing_user = await users_collection.find_one({"user_id": user_id})
+    if not existing_user:
+        raise ValueError(f"Utilisateur {user_id} n'existe pas. Inscription requise avant l'onboarding.")
     
     # Construire le ProfileCore depuis les slots
     profile = ProfileCore(
@@ -84,33 +89,29 @@ async def create_user_document(user_id: str, slots: dict) -> dict:
         notes=slots.get("notes")
     )
     
-    # Créer le UserDocument
-    user_doc = UserDocument(
-        profile=profile,
-        medical=medical,
-        nutrition=nutrition,
-        goals=goals,
-        religiousRestrictions=religious,
-        misc=misc,
-        createdAt=datetime.utcnow()
+    # Préparer les mises à jour (NE PAS écraser email, username, password_hash)
+    profile_updates = {
+        "profile": profile.model_dump(by_alias=True, exclude_none=False),
+        "medical": medical.model_dump(by_alias=True, exclude_none=False),
+        "nutrition": nutrition.model_dump(by_alias=True, exclude_none=False),
+        "goals": goals.model_dump(by_alias=True, exclude_none=False),
+        "religiousRestrictions": religious.model_dump(by_alias=True, exclude_none=False) if religious else None,
+        "misc": misc.model_dump(by_alias=True, exclude_none=False) if misc else None,
+        "profile_completed": True,
+        "createdAt": datetime.utcnow()  # Rétrocompatibilité
+    }
+    
+    # Mettre à jour uniquement les champs de profil (pas les champs d'auth)
+    result = await users_collection.find_one_and_update(
+        {"user_id": user_id},
+        {"$set": profile_updates},
+        return_document=True
     )
     
-    # Convertir en dict pour MongoDB - EXCLURE _id car MongoDB le génère automatiquement
-    doc_dict = user_doc.model_dump(
-        by_alias=True,
-        exclude_none=False,
-        exclude_unset=False,
-        exclude={"id"}  # Exclure le champ id/_id pour éviter l'erreur de clé dupliquée
-    )
+    if result:
+        result["_id"] = str(result["_id"])
     
-    # Ajouter l'user_id
-    doc_dict["user_id"] = user_id
-    
-    # Insérer dans MongoDB
-    result = await users_collection.insert_one(doc_dict)
-    doc_dict["_id"] = str(result.inserted_id)
-    
-    return doc_dict
+    return result
 
 
 async def get_user_document(user_id: str) -> dict | None:

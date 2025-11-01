@@ -1,0 +1,163 @@
+.container {
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2.5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Effet grain/texture identique à auth */
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.85;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+/* Header avec Bienvenue */
+.welcomeHeader {
+  width: 100%;
+  max-width: 500px;
+  z-index: 10;
+  position: relative;
+  margin-bottom: 1rem;
+  margin-top: 2rem;
+}
+
+.welcomeText {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #000;
+  text-align: center;
+  margin: 0;
+  letter-spacing: -0.5px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Section centrale avec Logo plus grand */
+.centerSection {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 0;
+  position: relative;
+  margin: 1rem 0;
+}
+
+/* MY*PLATE* qui tourne en bas, plus grand et plus haut */
+.rotatingTextSection {
+  z-index: 10;
+  position: relative;
+  margin-bottom: 2rem;
+  margin-top: 1rem;
+  transform: scale(1);
+}
+
+/* Section des boutons en bas */
+.buttonSection {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  z-index: 10;
+  position: relative;
+}
+
+.authButton {
+  flex: 1;
+  padding: 1.125rem 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
+  font-family: 'Quicksand', sans-serif;
+}
+
+/* Premier bouton (Sign In) - vert */
+.authButton:first-child {
+  background: #66BB6A;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+}
+
+.authButton:first-child:hover {
+  background: #43A047;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 187, 106, 0.4);
+}
+
+/* Deuxième bouton (Log In) - blanc avec bordure verte */
+.authButton:last-child {
+  background: white;
+  color: #2E7D32;
+  border: 3px solid #66BB6A;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.authButton:last-child:hover {
+  background: #66BB6A;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+}
+
+.authButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive pour petits écrans */
+@media (max-width: 375px) {
+  .container {
+    padding: 2rem 1.25rem;
+  }
+
+  .welcomeText {
+    font-size: 1.625rem;
+  }
+
+  .buttonSection {
+    flex-direction: column;
+    max-width: 400px;
+  }
+
+  .authButton {
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
+  }
+
+  .rotatingTextSection {
+    transform: scale(0.6);
+  }
+}
+
+/* Responsive pour grands écrans */
+@media (min-width: 768px) {
+  .container {
+    padding: 3.5rem 2rem;
+  }
+
+  .welcomeText {
+    font-size: 2.25rem;
+  }
+
+  .authButton {
+    font-size: 1.25rem;
+  }
+}

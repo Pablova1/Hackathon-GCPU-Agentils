@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 
-from app.api.onboarding import router 
+from app.api.routes.onboarding import router as onboarding_router
 
 app = FastAPI()
-app.include_router(router)
+app.include_router(onboarding_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,0 +1,394 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0;
+  padding-top: 60px;
+  font-family: 'Quicksand', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background 0.5s ease;
+  position: relative;
+}
+
+.logoContainer {
+  position: relative;
+  z-index: 2;
+  animation: fadeIn 0.8s ease;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  margin-bottom: 0;
+}
+
+.logoContainer img {
+  width: 140px !important;
+  height: 140px !important;
+  max-width: 140px;
+  max-height: 140px;
+}
+
+/* Logo blanc pour la page login */
+.logoContainer[data-tab="login"] img {
+  filter: brightness(0) invert(1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Effet grain/texture très visible sur le fond */
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.65;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Fond blanc pour l'inscription (register) */
+.container[data-tab="register"] {
+  background: #ffffff;
+}
+
+.container[data-tab="register"]::before {
+  opacity: 0.85;
+}
+
+/* Fond vert uni et plus clair pour la connexion (login) */
+.container[data-tab="login"] {
+  background: #66BB6A;
+}
+
+.container[data-tab="login"]::before {
+  display: none;
+}
+
+.card {
+  border-radius: 30px 30px 20px 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  max-width: 420px;
+  width: calc(100% - 40px);
+  overflow: hidden;
+  transition: all 0.5s ease;
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+}
+
+/* Card blanche pour register */
+.card[data-tab="register"] {
+  background: #ffffff;
+  border: none;
+}
+
+/* Card verte pour login */
+.card[data-tab="login"] {
+  background: #66BB6A;
+  border: none;
+}
+
+.header {
+  padding: 30px 30px 20px;
+  text-align: center;
+  border-radius: 27px 27px 0 0;
+  transition: all 0.5s ease;
+}
+
+/* Header vert pour register */
+.header[data-tab="register"] {
+  background: #66BB6A;
+  color: white;
+}
+
+/* Header blanc pour login */
+.header[data-tab="login"] {
+  background: #ffffff;
+  color: #43A047;
+}
+
+.header h1 {
+  font-size: 32px;
+  margin-bottom: 10px;
+  margin-top: 0;
+  font-weight: 800;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header p {
+  opacity: 0.9;
+  font-size: 15px;
+  margin: 0;
+  font-weight: 500;
+  font-family: 'Quicksand', sans-serif;
+}
+
+.tabs {
+  display: flex;
+  background: transparent;
+  padding: 0 15px;
+  gap: 10px;
+  margin-bottom: 20px;
+  margin-top: -10px;
+}
+
+.tab {
+  flex: 1;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+/* Quand on est sur register (fond blanc de la page) */
+.tabs[data-tab="register"] .tab {
+  background: #66BB6A;
+  color: white;
+  border: none;
+}
+
+.tabs[data-tab="register"] .tab.active {
+  background: #ffffff;
+  color: #666;
+  transform: scale(1.05);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+}
+
+/* Quand on est sur login (fond vert de la page) */
+.tabs[data-tab="login"] .tab {
+  background: #ffffff;
+  color: #666;
+  border: none;
+}
+
+.tabs[data-tab="login"] .tab.active {
+  background: #43A047;
+  color: white;
+  transform: scale(1.05);
+  border: none;
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.5);
+}
+
+.tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.formContainer {
+  padding: 30px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: color 0.3s;
+}
+
+/* Labels verts pour register */
+.formGroup[data-tab="register"] label {
+  color: #2E7D32;
+}
+
+/* Labels blancs pour login */
+.formGroup[data-tab="login"] label {
+  color: #ffffff;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: white;
+}
+
+/* Inputs pour register */
+.formGroup[data-tab="register"] input {
+  border-color: #4CAF50;
+  color: #333;
+}
+
+.formGroup[data-tab="register"] input:focus {
+  outline: none;
+  border-color: #2E7D32;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Inputs pour login */
+.formGroup[data-tab="login"] input {
+  border-color: #ffffff;
+  color: #333;
+  background: #ffffff;
+}
+
+.formGroup[data-tab="login"] input:focus {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.formGroup input::placeholder {
+  color: #999;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Bouton pour register (vert) */
+.submitButton[data-tab="register"] {
+  background: #66BB6A;
+  color: white;
+  border: 2px solid #66BB6A;
+}
+
+.submitButton[data-tab="register"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+  background: #4CAF50;
+}
+
+/* Bouton pour login (vert) */
+.submitButton[data-tab="login"] {
+  background: #66BB6A;
+  color: white;
+  border: 3px solid white;
+}
+
+.submitButton[data-tab="login"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 187, 106, 0.4);
+  background: #4CAF50;
+  border: 3px solid white;
+}
+
+.submitButton:active {
+  transform: translateY(0);
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.successMessage {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.errorMessage {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.loading {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.loading p {
+  margin-top: 15px;
+  color: #2E7D32;
+  font-weight: 600;
+}
+
+.spinner {
+  border: 4px solid #e8f5e9;
+  border-top: 4px solid #4CAF50;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive mobile */
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .card {
+    max-width: 100%;
+    border-radius: 25px 25px 15px 15px;
+  }
+  
+  .header {
+    padding: 25px 20px 15px;
+  }
+  
+  .header h1 {
+    font-size: 24px;
+  }
+  
+  .formContainer {
+    padding: 20px;
+  }
+  
+  .tabs {
+    padding: 0 10px;
+  }
+}

@@ -8,6 +8,25 @@
 
 Les Agentils on fait une plateforme intelligente de nutrition personnalisée qui utilise l'IA pour analyser les habitudes alimentaires, fournir des recommandations sur mesure et accompagner les utilisateurs dans leur parcours de bien-être.
 
+## Lancement Backend
+cd backend
+python run.py
+
+## Lancement Frontend
+cd frontend
+npm run dev
+
+## Lancement avec Docker
+docker-compose up --build
+docker-compose build --no-cache frontend ## Pour refresh le cache du front
+
+## Voir les conteneurs en cours d'execution
+docker ps -a
+
+## Arreter les conteneurs Docker en cours d'exécution
+docker-compose down # Arrête ET supprime les conteneurs
+docker stop $(docker ps -q) # Arrête les conteneurs en cours d'exécution
+
 ### 🎯 Fonctionnalités principales
 
 - **Onboarding intelligent** : Questionnaire adaptatif géré par IA pour créer un profil nutritionnel personnalisé
