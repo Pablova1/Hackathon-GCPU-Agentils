@@ -13,6 +13,10 @@ MyPlate est une plateforme intelligente de nutrition personnalisée qui utilise 
 - **Frontend** : https://agentils-frontend-807842718393.europe-west1.run.app
 - **Backend API** : https://agentils-backend-807842718393.europe-west1.run.app
 
+## 🏆 Contexte
+
+Ce projet a été développé dans le cadre du **Hackathon GCPU (Google Cloud Platform University)** organisé par Google. Notre équipe des Agentils a relevé le défi de créer une solution innovante utilisant les technologies Google Cloud Platform et l'intelligence artificielle pour améliorer le bien-être nutritionnel des utilisateurs.
+
 ## 🚀 Lancement Rapide
 
 ### Développement Local
@@ -84,4 +88,18 @@ Monitoring   : Google Cloud Logging
 - **Git**
 - **MongoDB Atlas Account**
 
-**Développé avec ❤️ par l'équipe des Agentils**
+---
+
+## 👥 Équipe
+
+**Les Agentils** - Hackathon GCPU 2025
+
+- **Natalia Gérard**
+- **Héloïse Roméo**
+- **Paul Ranc**
+- **Valentin Templé**
+- **Valentin Rech**
+
+---
+
+**Développé avec ❤️ par l'équipe des Agentils lors du Hackathon GCPU 2025**
