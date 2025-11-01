@@ -1,6 +1,9 @@
 # Secrets & Environment
-*.env*
+.env
+.env.local
+.env.*.local
 secrets/
+backend-env.yaml
 
 # Dependencies
 venv/
